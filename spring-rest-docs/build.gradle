@@ -2,6 +2,7 @@ plugins {
 	id 'java'
 	id 'org.springframework.boot' version '3.1.1'
 	id 'io.spring.dependency-management' version '1.1.0'
+	id "org.asciidoctor.jvm.convert" version "3.3.2"
 }
 
 group = 'restdocs'
@@ -11,15 +12,83 @@ java {
 	sourceCompatibility = '17'
 }
 
+configurations {
+	compileOnly {
+		extendsFrom annotationProcessor
+	}
+
+	asciidoctorExt
+}
+
 repositories {
 	mavenCentral()
 }
 
 dependencies {
+	implementation 'org.springframework.boot:spring-boot-starter-web'
 	implementation 'org.springframework.boot:spring-boot-starter'
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+
+	// build/generated-snippets 에 생긴 .adoc 들을 내가 설정한 index.adoc 에서 읽을수 있게 한다.
+    // index.adoc 파일에서 operation을 사용하여 .adoc들을 연동한다.
+    // 최종적으로 .adoc 파일을 HTML로 만들어 export 한다.
+	asciidoctorExt 'org.springframework.restdocs:spring-restdocs-asciidoctor:3.0.0' 
+	// restdocs-mockmvc의 testCompile 구성 -> mockMvc를 사용해서 snippets 조각들을 뽑아낼 수 있게 된다.
+	testImplementation 'org.springframework.restdocs:spring-restdocs-mockmvc:3.0.0'
+
+	// lombok
+	compileOnly 'org.projectlombok:lombok' 
+	annotationProcessor 'org.projectlombok:lombok'
+}
+
+
+ext { 
+	// 아래서 사용할 변수 선언
+	snippetsDir = file('build/generated-snippets')
 }
 
 tasks.named('test') {
+	// 스니펫 조각들이 build/generated-snippets로 출력
+	outputs.dir snippetsDir
 	useJUnitPlatform()
 }
+
+asciidoctor { 
+
+	configurations 'asciidoctorExt' 
+	dependsOn test // test에 의존하여 test작업 후 실행
+
+	inputs.dir snippetsDir // snippetsDir 를 입력으로 구성
+
+    // source가 없으면 .adoc파일을 전부 html로 만들어버림
+    // source 지정시 특정 adoc만 HTML로 만든다.
+    sources{
+        include("**/index.adoc")
+    }    
+}
+
+// static/docs 폴더 비우기
+asciidoctor.doFirst {
+    delete file('src/main/resources/static/docs')
+}
+
+// asccidoctor 작업 이후 생성된 HTML 파일을 static/docs 로 copy
+task copyDocument(type: Copy) {
+    dependsOn asciidoctor
+    from file("build/docs/asciidoc")
+    into file("src/main/resources/static/docs")
+}
+
+// 파일 복사 후 빌드 진행
+build {
+    dependsOn copyDocument
+}
+
+
+// jar 파일이 생성되기 전에 Html 생성
+// bootJar {
+// 	dependsOn asciidoctor 
+// 	from ("${asciidoctor.outputDir}/html5") { 
+// 		into 'static/docs'
+// 	}
+// }
