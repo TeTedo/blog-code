@@ -1,0 +1,13 @@
+= Member REST Docs
+:doctype: book
+:icons: font
+:source-highlighter: highlightjs
+:toc: left
+:sectlinks:
+
+[[Member-API]]
+== Member API
+
+[[Member-조회]]
+=== Member 조회
+operation::member[snippets='http-request,http-response,response-fields']
