@@ -1,0 +1,9 @@
+spring:
+  # application-oauth.yml 파일 설정
+  profiles:
+    include:
+      oauth
+
+  #  env파일 설정
+  config:
+    import: optional:file:.env[.properties]
