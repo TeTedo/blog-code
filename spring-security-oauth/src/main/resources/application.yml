@@ -1,0 +1,9 @@
+spring:
+  # application-oauth.yml ?? ??
+  profiles:
+    include:
+      oauth
+
+  #  env?? ??
+  config:
+    import: optional:fil?e:.env[.properties]
