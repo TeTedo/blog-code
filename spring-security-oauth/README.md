@@ -1,24 +1,24 @@
 # Spring Security - Oauth 2.0
 
-## Google login
+## **Google login**
 
 <img width="542" alt="google cloud" src="https://github.com/TeTedo/blog-code/assets/107897812/dba04529-ac2e-473d-a785-7e1e3621b8af">
 
-1. [구글 클라우드 플랫폼 주소](https://console.cloud.google.com/)으로 이동해서 프로젝트 만들기
+### **1. [구글 클라우드 플랫폼 주소](https://console.cloud.google.com/)으로 이동해서 프로젝트 만들기**
 
 <img width="428" alt="oauth-practice" src="https://github.com/TeTedo/blog-code/assets/107897812/1e6c3857-f626-4251-8c78-567f578ba5fe">
 
-2. 완성된 프로젝트 생성 후 API 및 서비스 클릭
+### **2. 완성된 프로젝트 생성 후 API 및 서비스 클릭**
 
 <img width="865" alt="oauth" src="https://github.com/TeTedo/blog-code/assets/107897812/4d1ddbca-e85f-480a-8b07-7c8a859cd7b1">
 
-3. OAuth 클라이언트 ID 만들기
+### **3. OAuth 클라이언트 ID 만들기**
 
 <img width="543" alt="oauth-redirect" src="https://github.com/TeTedo/blog-code/assets/107897812/c68b1062-f8fc-4571-96a8-e78cd84649a3">
 
-4. OAuth는 리다이렉션 URI를 설정하여 로그인 성공시 보여줄 화면을 지정할 수 있다.
+### **4. OAuth는 리다이렉션 URI를 설정하여 로그인 성공시 보여줄 화면을 지정할 수 있다.**
 
-5. application-oatuh.yml 파일 생성
+### **5. application-oatuh.yml 파일 생성**
 
 ```java
 spring:
@@ -40,7 +40,7 @@ scope를 설정하지 않으면 기본으로 openid, profile, email이 등록된
 
 client-id와 client-scret은 env파일로 숨겨서 보관하자.
 
-6. User Entity 만들기
+### **6. User Entity 만들기**
 
 ```java
 // domain.user.model.vo.Role
@@ -89,7 +89,7 @@ public class User {
 
 유저 엔티티를 만들고 Role이라는 enum을 생성했다.
 
-7. UserRepository 생성
+### **7. UserRepository 생성**
 
 ```java
 @Repository
@@ -100,7 +100,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
 이메일을 통해 가입이 되어있는지 안되어있는지 확인하기 위해 findByEmail을 미리 만들어 준다.
 
-8. OAuthAttributes Class 생성
+### **8. OAuthAttributes Class 생성**
 
 ```java
 @Getter
@@ -160,7 +160,7 @@ public class OAuthAttributes {
 
 이 클래스는 유저가 로그인 시도를 할때 어떤 플랫폼에서 로그인 시도를 하는지 체크하고 기존 유저아이디의 정보를 받아오는 클래스이다.
 
-9. SessionUser Class 생성
+### **9. SessionUser Class 생성**
 
 ```java
 @Getter
@@ -181,7 +181,7 @@ User Entity를 세션에 담을 수도 있지만 나중에 자식 엔티티를 �
 
 필요한 정보만 세션에 담기 위해 클래스를 만들어 준다.
 
-10. CustomOAuth2UserService
+### **10. CustomOAuth2UserService**
 
 ```java
 @Service
@@ -228,7 +228,7 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
 
 이때 User Entity에서 설정했던 Role을 부여하여 가지고 있는다.
 
-11. SecurityConfig 생성
+### **11. SecurityConfig 생성**
 
 ```java
 @EnableWebSecurity
