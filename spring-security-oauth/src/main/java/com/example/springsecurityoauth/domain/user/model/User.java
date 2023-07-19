@@ -35,4 +35,10 @@ public class User {
     public String getRoleKey() {
         return role.getType();
     }
+
+    public User update(String name) {
+        this.name = name;
+
+        return this;
+    }
 }

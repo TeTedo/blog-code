@@ -89,3 +89,178 @@ public class User {
 
 유저 엔티티를 만들고 Role이라는 enum을 생성했다.
 
+7. UserRepository 생성
+
+```java
+@Repository
+public interface UserRepository extends JpaRepository<User, Long> {
+    Optional<User> findByEmail(String email);
+}
+```
+
+이메일을 통해 가입이 되어있는지 안되어있는지 확인하기 위해 findByEmail을 미리 만들어 준다.
+
+8. OAuthAttributes Class 생성
+
+```java
+@Getter
+public class OAuthAttributes {
+    private Map<String, Object> attributes;
+    private String nameAttributeKey;
+    private String name;
+    private String email;
+    
+    @Builder
+    public OAuthAttributes(Map<String, Object> attributes, String nameAttributeKey, String name, String email) {
+        this.attributes = attributes;
+        this.nameAttributeKey = nameAttributeKey;
+        this.name = name;
+        this.email = email;
+    }
+    
+    public static OAuthAttributes of(String registrationId, String userNameAttributeName,
+                                     Map<String, Object> attributes) {
+        // 어떤 플랫폼에서 로그인하는지 체크한다.
+        if("naver".equals(registrationId)) {
+            return ofNaver("id", attributes);
+        }
+        
+        return ofGoogle(userNameAttributeName, attributes);
+    }
+
+    private static OAuthAttributes ofGoogle(String userNameAttributeName, Map<String, Object> attributes) {
+        return OAuthAttributes.builder()
+                .name((String) attributes.get("name"))
+                .email((String) attributes.get("email"))
+                .attributes(attributes)
+                .nameAttributeKey(userNameAttributeName)
+                .build();
+    }
+
+    private static OAuthAttributes ofNaver(String userNameAttributeName, Map<String, Object> attributes) {
+        Map<String,Object> response = (Map<String, Object>) attributes.get("response");
+        return OAuthAttributes.builder()
+                .name((String) response.get("name"))
+                .email((String) response.get("email"))
+                .attributes(response)
+                .nameAttributeKey(userNameAttributeName)
+                .build();
+    }
+
+    public User toEntity(){
+        return User.builder()
+                .name(name)
+                .email(email)
+                .role(Role.GUEST)
+                .build();
+    }
+
+}
+```
+
+이 클래스는 유저가 로그인 시도를 할때 어떤 플랫폼에서 로그인 시도를 하는지 체크하고 기존 유저아이디의 정보를 받아오는 클래스이다.
+
+9. SessionUser Class 생성
+
+```java
+@Getter
+public class SessionUser implements Serializable {
+    private String name;
+    private String email;
+
+    public SessionUser(User user) {
+        name = user.getName();
+        email = user.getEmail();
+    }
+}
+```
+
+유저의 정보를 세션에 담기 위해 따로 클래스를 생성한다.
+
+User Entity를 세션에 담을 수도 있지만 나중에 자식 엔티티를 갖게 될경우 너무 많은 정보를 담게 된다면 성능에 문제가 생길 수 도 있다.
+
+필요한 정보만 세션에 담기 위해 클래스를 만들어 준다.
+
+10. CustomOAuth2UserService
+
+```java
+@Service
+@RequiredArgsConstructor
+public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequest, OAuth2User> {
+    private final UserRepository userRepository;
+    private final HttpSession httpSession;
+
+    @Override
+    public OAuth2User loadUser(OAuth2UserRequest userRequest) throws OAuth2AuthenticationException {
+        OAuth2UserService<OAuth2UserRequest, OAuth2User> delegate = new DefaultOAuth2UserService();
+
+        OAuth2User oAuth2User = delegate.loadUser(userRequest);
+        String registrationId = userRequest.getClientRegistration()
+                .getRegistrationId();
+        String userNameAttributeName = userRequest.getClientRegistration()
+                .getProviderDetails()
+                .getUserInfoEndpoint()
+                .getUserNameAttributeName();
+
+        OAuthAttributes oAuthAttributes = OAuthAttributes.of(registrationId, userNameAttributeName, oAuth2User.getAttributes());
+
+        User user = saveOrUpdate(oAuthAttributes);
+
+        httpSession.setAttribute("user", new SessionUser(user));
+
+        return new DefaultOAuth2User(
+                Collections.singleton(new SimpleGrantedAuthority(user.getRoleKey())),
+                oAuthAttributes.getAttributes(), oAuthAttributes.getNameAttributeKey());
+    }
+
+    private User saveOrUpdate(OAuthAttributes oAuthAttributes) {
+        // 중복 체크
+        User user = userRepository.findByEmail(oAuthAttributes.getEmail())
+                .map(entity -> entity.update(oAuthAttributes.getName()))
+                .orElse(oAuthAttributes.toEntity());
+
+        return userRepository.save(user);
+    }
+}
+```
+
+유저가 로그인 요청시 위에서 만들었던 OAuthAttributes 클래스를 이용하여 OAuth2User 를 만든다.
+
+이때 User Entity에서 설정했던 Role을 부여하여 가지고 있는다.
+
+11. SecurityConfig 생성
+
+```java
+@EnableWebSecurity
+@RequiredArgsConstructor
+public class SecurityConfig {
+
+    private final CustomOAuth2UserService customOAuth2UserService;
+
+    @Bean
+    SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        http
+                .csrf().disable()
+                .headers().frameOptions().disable()
+                .and().authorizeHttpRequests()
+                .requestMatchers("/","/css/**","/images/**","/js/**","/h2-console/**").permitAll()
+                .requestMatchers("/api/v1/**").hasRole(Role.USER.name())
+                .anyRequest().authenticated()
+                .and().logout().logoutSuccessUrl("/")
+                .and().oauth2Login()
+                .userInfoEndpoint()
+                .userService(customOAuth2UserService);
+
+        return http.build();
+
+    }
+}
+```
+
+지금 spring security가 7.0을 준비한다고 속성들이 deprecated 되었다고 하는데 무시하고 실행했더니 잘된다.
+
+[spring security 공식문서](https://docs.spring.io/spring-security/reference/migration-7/configuration.html) 참고
+
+참고
+
+[스프링 부트와 AWS로 혼자 구현하는 웹 서비스 - 이동욱 지음 p163~190](https://www.yes24.com/Product/Goods/83849117) 책에 더 자세한 내용이 나와있습니다.
