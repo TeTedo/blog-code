@@ -281,11 +281,13 @@ Recoil은 이게 끝이다.
 
 간단한 예시코드지만 Redux와 Recoil의 코드차이는 분명하게 느껴진다.
 
+또 useState처럼 직관적으로 사용할 수 있기 때문에 좋았다.
+
 recoil의 selector를 사용해도 코드의 양은 크게 늘어나지 않는다.
 
 앞으로 프로젝트에서 둘중 하나를 고른다고 한다면 디버깅에 초점을 두고 원래 Redux에 대한 지식이 있는 팀이라면 Redux를 Redux를 모른다면 러닝커브가 짧은 recoil을 염두해 볼만한 것 같다.
 
-참고
+#### 참고
 
 [Redux의 데이터 흐름](https://velog.io/@jos9187/Redux%EC%9D%98-%EB%8D%B0%EC%9D%B4%ED%84%B0-%ED%9D%90%EB%A6%84)
 
