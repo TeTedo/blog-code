@@ -1,5 +1,7 @@
 # Spring Boot WebClient
 
+모든 소스는 [github]()에 있습니다.
+
 ## WebClient vs RestTemplate
 
 스프링에서 http 요청을 위해 `WebClient` 와 `RestTemplate`이 있다.
@@ -84,9 +86,135 @@ RestTemplate은 제공자에게 요청 후 응답이 올때 까지 기다렸지�
 
 즉 기다린 시간만큼 다른 일을 하며 낭비되는 메모리를 줄이는 것이다.
 
+### 성능 비교
+
+![download (2)](https://github.com/TeTedo/blog-code/assets/107897812/dcc4af3d-ba63-4f87-8723-234c16045b4b)
+
+출처 : https://dzone.com/articles/raw-performance-numbers-spring-boot-2-webflux-vs-s
+
+유저가 1000명까지는 비슷하지만 그 이후에 차이가 많이 벌어진다.
+
+소수의 유저가 사용한다면 상관없지만 동시에 많은 유저가 사용한다면 `WebClient`를 고려해볼만 하다.
+
+### 동기, 비동기, Blocking, Non-Blocking
+
+![download (3)](https://github.com/TeTedo/blog-code/assets/107897812/bf7ef974-4ec0-4e07-8804-fa1f31b070b5)
+
+출처 : https://gngsn.tistory.com/154
+
+`Blocking`은 요청에 대한 응답을 할때까지 기다린다.
+
+`NonBlocking`은 요청을 하고 바로 제어권을 받는다.
+
+`동기`는 결과를 직접 받아 처리한다.
+
+`비동기`는 결과를 직접 받지는 않고 콜백함수를 통해 받는다.
+
 ## WebClient 사용하기
 
-## WebClient Interceptor
+### 의존성 추가
+
+```java
+implementation 'org.springframework.boot:spring-boot-starter-webflux'
+```
+
+### webClient Bean 생성
+
+```java
+@Configuration
+public class WebclientConfig {
+    static private final String BASE_URL = "http://localhost:8080";
+
+    @Bean
+    public WebClient webClient() {
+
+        DefaultUriBuilderFactory factory = new DefaultUriBuilderFactory(BASE_URL);
+        factory.setEncodingMode(DefaultUriBuilderFactory.EncodingMode.VALUES_ONLY);
+
+        return WebClient.builder()
+                .baseUrl(BASE_URL)
+                .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                .defaultCookie("cookieName", "cookieValue")
+                .filter(ExchangeFilterFunction.ofRequestProcessor(
+                        clientRequest -> {
+                            System.out.println("Request: " + clientRequest);
+                            return Mono.just(clientRequest);
+                        }))
+                .filter(ExchangeFilterFunction.ofResponseProcessor(
+                        clientResponse -> {
+                            System.out.println("Response: " + clientResponse);
+                            return Mono.just(clientResponse);
+                        }))
+                .uriBuilderFactory(factory)
+                .build();
+    }
+}
+```
+
+`EncodingMode.VALUES_ONLY` : Uri 변수값만 인코딩한다.
+
+`EncodingMode.URI_COMPONENT` : 각 URI 구성 요소에 따라 인코딩된다. 경로변수는 세그먼트에 대한 규칙, 쿼리 매개변수는 쿼리 문자열에 대한 규칙으로 인코딩된다.
+
+`EncodingMode.NONE` : 인코딩 하지 않는다.
+
+`filter` : Request 요청을 하기 전, Response 응답을 받기 전에 Intercept 하는 filter를 구현 할 수 있다.
+
+### test controller 생성
+
+`retrieve` : ClientResponse의 body값을 받는다. toEntity, bodyToMono, bodyToFlux를 사용할 수 있다.
+
+`exchange` : 아래 2개의 exchange는 ClientResponse를 상태값, 헤더와 함께 가져온다. 세밀한 조정이 가능하지만 모든 처리를 직접 하게되면 메모리 누수가 발생할 가능성이 있기 때문에 retrieve를 권장한다고 한다. exchange는 deprecated 되어 exchangeToFlux, exchangeToMono를 사용해야 한다.
+
+`Mono` 객체는 0~1개의 결과를 처리하고 `Flux`는 0~N개의 결과를 처리하는 객체이다.
+
+```java
+@GetMapping("test")
+public void getDataFrom8080() {
+	Map<String, String> request = new HashMap<>();
+
+	request.put("test", "testData");
+
+	Mono<String> data = webClient.post()
+			.uri("test")
+			.bodyValue(request)
+			.retrieve()
+			.bodyToMono(String.class);
+
+	// blocking
+	String response1 = data.block();
+
+	// non-blocking
+	data.subscribe(string -> System.out.println(string));
+}
+```
+
+먼저 retrieve를 사용한 예제이다.
+
+`blocking`으로 처리할때에는 `block()`을 사용
+
+`non-blocking`으로 처리할때에는 안에 콜백함수를 넣어주면 된다.
+
+다음은 exchange를 이용한 예제이다.
+
+```java
+@GetMapping("test2")
+public void errorRetrieve() throws Exception {
+	Map<String, String> request = new HashMap<>();
+
+	request.put("test", "testData");
+
+	Mono<String> data = webClient.post()
+			.uri("test")
+			.bodyValue(request)
+			.exchangeToMono(response -> {
+				if (response.statusCode().equals(HttpStatus.OK)) {
+					return response.bodyToMono(String.class);
+				} else {
+					return response.createException().flatMap(Mono::error);
+				}
+			});
+}
+```
 
 ### 참고
 
@@ -95,3 +223,7 @@ RestTemplate은 제공자에게 요청 후 응답이 올때 까지 기다렸지�
 [Spring doc RestTemplate](https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/web/client/RestTemplate.html)
 
 [WebClient 사용방법 가이드](https://thalals.tistory.com/379)
+
+[Spring WebFlux는 어떻게 적은 리소스로 많은 트래픽을 감당할까?](https://alwayspr.tistory.com/44)
+
+[Spring WebClient, 어렵지 않게 사용하기](https://gngsn.tistory.com/154)
