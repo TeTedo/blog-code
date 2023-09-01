@@ -1,23 +1,27 @@
-import logo from './logo.svg';
-import './App.css';
+import { useRef } from "react";
+import { CSVLink } from "react-csv";
+import { useRecoilValue } from "recoil";
+import "./App.css";
+import { dataState } from "./downloadDataState";
 
 function App() {
+  const csvRef = useRef();
+  const downloadData = useRecoilValue(dataState);
+
+  const csvDownloadHandler = () => {
+    csvRef.current.link.click();
+  };
   return (
     <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+      <div onClick={csvDownloadHandler}>진짜 다운로드 버튼</div>
+      <CSVLink
+        data={downloadData.data}
+        headers={downloadData.headers}
+        hidden={true}
+        filename="downloadData.csv"
+        ref={csvRef}
+        target="_blank"
+      />
     </div>
   );
 }
