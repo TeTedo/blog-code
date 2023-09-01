@@ -1,5 +1,7 @@
 # React-CSV-Download + React recoil
 
+모든 코드는 [github](https://github.com/TeTedo/blog-code/tree/main/react-csv-download)에 있습니다.
+
 ## react-csv를 선택한 이유
 
 여러 라이브러리중 react-csv를 선택한 이유는 사용이 간편해보여서이다.
@@ -226,7 +228,9 @@ function App() {
 export default App;
 ```
 
-CSVLink의 클릭시점을 조절하여 값을 전달한다.
+CSVLink의 클릭시점을 조절하여 값을 전달하여 다운로드 할 수 있다.
+
+추가로 서버에서 데이터를 받아와 csv로 다운받아야 하는 경우도 위와 같이 click()을 잘 활용하여 만들면 된다.
 
 ### 참고
 
