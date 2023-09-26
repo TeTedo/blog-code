@@ -9,14 +9,20 @@ export const ReactMemo = () => {
     setUserData([...userData, { id: 4, name: "temp", age: 25 }]);
   };
 
+  const changeUser = () => {
+    setUserData([{ id: 5, name: "teddy", age: 20 }]);
+  };
+
   return (
     <div>
       <div>ReactMemo Test</div>
       <button onClick={addUser}>유저 추가</button>
 
+      <button onClick={changeUser}>유저 변경</button>
+
       {userData.map((user, idx) => (
         <ReactMemoDetail
-          key={user.id}
+          key={user.name}
           id={user.id}
           name={user.name}
           age={user.age}

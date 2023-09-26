@@ -9,4 +9,8 @@ export const ReactMemoDetail = React.memo(({ id, name, age }) => {
       <span>{age}</span>
     </div>
   );
-});
+}, arePropsEqualCustom);
+
+function arePropsEqualCustom(oldProps, newProps) {
+  return oldProps.name === newProps.name && oldProps.age === newProps.age;
+}
