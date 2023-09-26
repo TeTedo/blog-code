@@ -1,7 +1,7 @@
 # React rendering 최적화
 
-- [React.memo]()
+- [React.memo](https://github.com/TeTedo/blog-code/tree/main/react-render-optimization/memo)
 
-- [useMemo]()
+- [useMemo](https://github.com/TeTedo/blog-code/tree/main/react-render-optimization/useMemo)
 
-- [useCallback]()
+- [useCallback](https://github.com/TeTedo/blog-code/tree/main/react-render-optimization/useCallback)

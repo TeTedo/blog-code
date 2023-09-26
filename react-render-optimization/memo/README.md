@@ -1,5 +1,7 @@
 # React 최적화 - React.memo
 
+모든 코드는 [github](https://github.com/TeTedo/blog-code/tree/main/react-render-optimization)에 있습니다.
+
 React는 부모가 렌더링 될때마다 자식들도 렌더링 되는 특징을 가지고 있다.
 
 이러한 렌더링을 최적화하는 방법은 여러가지가 있다.
