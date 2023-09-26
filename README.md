@@ -17,3 +17,5 @@
 - [Redux vs Recoil](https://github.com/TeTedo/blog-code/tree/main/react-redux-recoil)
 
 - [Recoil + react-csv](https://github.com/TeTedo/blog-code/tree/main/react-csv-download)
+- 
+- [React.memo 최적화](https://github.com/TeTedo/blog-code/tree/main/react-render-optimization/memo)
