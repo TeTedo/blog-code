@@ -59,7 +59,7 @@ out/
 
 ### VS Code ###
 .vscode/
-
+.DS_Store
 *.pem
 *.env
 package-lock.json
