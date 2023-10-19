@@ -4,6 +4,8 @@
 
 - [rest-docs로 API 문서 관리하기](https://github.com/TeTedo/blog-code/tree/main/spring-rest-docs)
 
+- [JPA N+1의 모든 것](https://github.com/TeTedo/blog-code/tree/main/spring-boot-jpa-N%2B1)
+
 ### Security
 
 - [spring-security OAuth2 Google login](https://github.com/TeTedo/blog-code/tree/main/spring-security-oauth)

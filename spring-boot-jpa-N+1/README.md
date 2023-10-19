@@ -1,6 +1,6 @@
 # JPA N + 1의 모든것
 
-모든 코드는 [github]()에 있습니다.
+모든 코드는 [github](https://github.com/TeTedo/blog-code/tree/main/spring-boot-jpa-N%2B1)에 있습니다.
 
 JPA를 사용하면 한번쯤 접하게 되는 N+1 문제에 대해서 다양한 해결책을 공부하려고 한다.
 
