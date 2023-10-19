@@ -3,6 +3,8 @@ package jpa.query.domain;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.hibernate.annotations.BatchSize;
+
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -26,6 +28,7 @@ public class Team {
     private String name;
 
     @OneToMany(mappedBy = "team")
+    @BatchSize(size = 100)
     private List<Member> members = new ArrayList<>();
 
     @Builder

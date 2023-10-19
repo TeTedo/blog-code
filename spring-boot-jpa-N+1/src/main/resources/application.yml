@@ -6,6 +6,9 @@ spring:
     username: sa
     password:
     driver-class-name: org.h2.Driver
+  properties:
+    hibernate:
+      default_batch_fetch_size: 100
   jpa:
     hibernate:
       ddl-auto: create

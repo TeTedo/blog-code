@@ -2,12 +2,14 @@ package jpa.query.repository;
 
 import java.util.List;
 
-import org.aspectj.lang.annotation.Before;
+import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.transaction.annotation.Transactional;
 
 import jakarta.persistence.EntityManager;
@@ -74,4 +76,46 @@ public class MemberRepositoryTest {
             System.out.println(member.getTeam());
         }
     }
+
+    @Test
+    public void 멤버_조회_EntityGraph() {
+        List<Member> members = memberRepository.findAllByEntityGraph();
+
+        for (Member member : members) {
+            System.out.println(member.getTeam());
+        }
+    }
+
+    @Test
+    public void 멤버_조회_FETCH_JOIN_Paging() {
+
+        int pageNumber = 0;
+        int pageSize = 5;
+        PageRequest pageRequest = PageRequest.of(pageNumber, pageSize);
+
+        Page<Member> members = memberRepository.findAllByFetchJoinWithPaging(pageRequest);
+
+        for (Member member : members) {
+            System.out.println(member.getTeam());
+        }
+
+        Assertions.assertThat(members.getSize()).isEqualTo(pageSize);
+        Assertions.assertThat(members.getContent())
+                .extracting("username")
+                .containsExactly("username0", "username1", "username2", "username3", "username4");
+    }
+
+    @Test
+    public void 팀_조회_FETCH_JOIN() {
+        List<Team> teams = teamRepository.findAllByFetchJoin();
+
+        for (Team team : teams) {
+            System.out.println("team : " + team);
+
+            for (Member member : team.getMembers()) {
+                System.out.println("member : " + member);
+            }
+        }
+    }
+
 }
