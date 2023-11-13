@@ -21,3 +21,7 @@
 - [Recoil + react-csv](https://github.com/TeTedo/blog-code/tree/main/react-csv-download)
 
 - [React.memo 최적화](https://github.com/TeTedo/blog-code/tree/main/react-render-optimization/memo)
+
+# Devops
+
+- [ELK Stack 8.x 서버 구축 (ubuntu 22.04)](https://github.com/TeTedo/blog-code/tree/main/elk-install)
