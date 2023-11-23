@@ -25,3 +25,5 @@
 # Devops
 
 - [ELK Stack 8.x 서버 구축 (ubuntu 22.04)](https://github.com/TeTedo/blog-code/tree/main/elk-install)
+
+- [ELK 디스크 부족 이슈 S3로 해결하기 - ubuntu 22.04](https://github.com/TeTedo/blog-code/tree/main/elk-storage-issue)
