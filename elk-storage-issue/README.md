@@ -1,5 +1,4 @@
 
-# ELK 디스크 부족 이슈 S3로 해결하기 - ubuntu 22.04
 
 ![image](https://github.com/TeTedo/blog-code/assets/107897812/6f9811b3-0dfe-4b78-b83f-681b477499dc)
 
@@ -17,11 +16,9 @@ df -h
 
 ec2 생성시 default 값인 8GB로 설정되어 있었다.
 
-[aws tutorial](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/modify-ebs-volume-on-instance.html)를 참고해서 기존 ec2의 volume을 20GB로 늘렸다.
+[AWS Ec2 디스크 용량 늘리기](https://leonkim.dev/aws/ce2-increase-disk-space/)를 참고해서 기존 ec2의 volume을 20GB로 늘렸다.
 
-volume의 사이즈를 늘린걸 적용하는데 시간이 꽤 걸린다. 그래서 처음부터 좀 넉넉하게 잡아서 인스턴스를 생성하면 좋을것 같다.
-
-### 로그 삭제
+## 1. 로그 삭제
 
 계속 로그파일을 저장하다보면 언젠가는 늘려놓은 volume도 가득 찰것이다.
 
@@ -50,7 +47,7 @@ sudo /usr/share/elasticsearch/bin/elasticsearch-keystore add s3.client.deflaut.a
 
 
 ## S3 백업 등록
-```bash
+```sh
 curl -u 'elastic:비밀번호'-X PUT 'http://127.0.0.1:9200/_snapshot/s3_elk_backup' -H 'Content-Type: application/json' -d '{
 
       "type":"s3",
@@ -80,14 +77,14 @@ curl -u 'elastic:비밀번호'-X PUT 'http://127.0.0.1:9200/_snapshot/s3_elk_bac
 cron을 읽어 특정 주기마다 실행시켜준다고 한다.
 cron과 스케줄러는 다음에 자세히 알아볼 예정이다.
 
-```
+```sh
 sudo crontab -e
 ```
 
 양식을 고르라고 하는데 나는 easiest라고 써져있던걸 선택했다.
 주석 마지막줄에 cron을 추가했다.
 
-```bash
+```sh
 0 0 * * * bash /home/ubuntu/daily_elk_backup.sh >> /home/ubuntu/log/elk_backup.log 2>&1
 ```
 
@@ -95,11 +92,11 @@ sudo crontab -e
 그 결과를 /home/ubuntu/log/elk_backup.log에 저장한다는 script이다.
 
 #### daily_elk_backup.sh
-```bash
+```sh
 sudo vi /home/ubuntu/daily_elk_backup.sh
 ```
 
-```bash
+```sh
 TODAY=$(date +'%Y.%m.%d')
 YESTERDAY=$(date --date="1 days ago" +'%Y.%m.%d')
 BEATS_VERSION="8.11.0" # Update this as needed
@@ -133,7 +130,7 @@ sh를 보면 전날 로그들을 snapshot에 저장하는 스크립트이다.
 
 추가로 cron에서 실행할 수 있도록 권한을 부여한다.
 
-```bash
+```
 sudo chmod +x /home/ubuntu/daily_elk_backup.sh
 ```
 
@@ -160,7 +157,7 @@ curl -u "elastic:비밀번호" -X GET "localhost:9200/_snapshot/s3_elk_backup/_a
 
 [ILM(Index Lifecycle Manage 공식문서)](https://www.elastic.co/guide/en/elasticsearch/reference/current/set-up-lifecycle-policy.html)를 참고하면 라이프사이클을 키바나에서도 관리할 수 있다.
 
-## Index 삭제
+## 2. Index 삭제
 
 나는 s3에 저장하는것과 마찬가지로 크론으로 삭제하는것도 작성해보도록 하겠다.
 
@@ -223,7 +220,7 @@ sudo crontab -e
 
 나의 crontab파일의 결과는 아래와 같다.
 
-```
+```sh
 # Edit this file to introduce tasks to be run by cron.
 # 
 # Each task to run has to be defined through a single line
@@ -253,7 +250,36 @@ sudo crontab -e
 
 매일 일주일 전 인덱스를 삭제하면 되기 때문에 삭제 또한 매일 실행시켜준다.
 
+## 3. 필요한 필드만 받아오기
 
+용량 부족의 가장큰 원인은 metricbeat였다.
+system module 내용을 전부 받아왔기 때문에 그만큼 엄청난 수의 beat를 받게 되었다.
+이를 해결하기 위해 필요한 필드만 받아오게끔 metricbeat.yml 파일을 수정해줬다.
+
+### metricbeat.yml
+
+```yml
+setup.kibana:
+  host: "[kibana host]"
+  username: "elastic"
+  password: "password"
+
+output.logstash:
+  hosts: ["[logstash host]"]
+  ssl.enabled: true
+
+processors:
+  - add_host_metadata: ~
+
+metricbeat.modules:
+- module: system
+  metricsets:
+    - cpu
+    - memory
+    - network
+    - fsstat
+  period: 30s
+```
 
 ## 후기
 
@@ -261,13 +287,14 @@ sh 파일을 작성해서 cron으로 등록하여 백업과 인덱스 삭제를 
 
 이를 커스텀하여 주기적으로 s3 용량관리도 할수 있을거라고 생각한다.
 생각보다 어렵지 않았고 공식문서에서 설명하는 kibana로 하는게 더 어려웠다.
-먼저 rollover라는 용어가 너무 생소했고 잘 와닿지 않는다..
+먼저 rollover라는 용어가 너무 생소했고 아직도 잘 와닿지 않는다..
 
 처음 elk를 설치하면서 tls 때문에 고생했던거에 비해 매우 스무스하게 오류를 해결했다.
 
-생각해보지 않았던 디스크 용량의 이슈를 겪어보며 스케줄링이 어떤식으로 동작하는지 궁금해서 곧 공부할 예정이다.
+생각해보지 않았던 디스크 용량의 이슈를 겪어보며 경험의 폭이 늘어난것 같다.
 
 ## 참고
+[AWS Ec2 디스크 용량 늘리기](https://leonkim.dev/aws/ce2-increase-disk-space/)
 [ElasticSearch s3 repository 공식문서](https://www.elastic.co/guide/en/elasticsearch/reference/current/repository-s3.html)
 [AWS S3를 활용한 ELK 스택 로그 백업 및 복원](https://bkjeon1614.tistory.com/319)
 [Create snapshot API 공식문서](https://www.elastic.co/guide/en/elasticsearch/reference/current/create-snapshot-api.html)
