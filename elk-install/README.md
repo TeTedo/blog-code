@@ -70,298 +70,6 @@ sudo vi /etc/elasticsearch/elasticsearch.yml
 
 ```
 
-### 5. ElasticSearch 실행
-
-```sh
-
-sudo /bin/systemctl daemon-reload
-
-sudo /bin/systemctl enable elasticsearch.service
-
-sudo systemctl start elasticsearch.service
-
-```
-
-#### 암호 설정
-
-
-```sh
-sudo /usr/share/elasticsearch/bin/elasticsearch-setup-passwords interactive
-```
-
-만약 비밀번호가 이미 설정되어 있다고 하면 초기화 시키고 다시 설정할 수 있다.
-
-```sh
-sudo /usr/share/elasticsearch/bin/elasticsearch-reset-password -u elastic -i
-```
-
-
-### 6. ElasticSearch 실행 확인
-
-```sh
-
-sudo systemctl status elasticsearch
-
-  
-curl -u elastic:[설정한 암호] -k "https://localhost:9200"
-
-```
-
-
-### 7. Kibana 설치
-
-  
-
-```sh
-
-sudo apt-get update && sudo apt-get install kibana
-
-```
-
-  
-
-#### 설정 변경
-
-
-#### 내부 SSL 설정 (본인은 AWS ELB에서 SSL설정)
-
-```sh
-sudo cp /etc/elasticsearch/certs/http_ca.crt /etc/kibana/
-```  
-
-kibana에서 ca를 설정할때 경로를 /etc/elasticsearch/certs/ 로 해버리면 권한 문제가 있어서 kibana쪽으로 파일을 복사해줬다.
-
-```sh
-
-sudo vi /etc/kibana/kibana.yml
-
-```
-
-
-
-```sh
-
-elasticsearch.hosts: ["https://localhost:9200"]
-
-elasticsearch.ssl.certificateAuthorities: [ "/etc/kibana/http_ca.crt" ]
-
-```
-
-위 설정을 추가하면 내부 SSL 통신을 할 수 있다.
-
-나는 로드밸런서에서 SSL 을 종료하기 때문에 내부에서는 http 통신으로 한다.
-따라서 위 설정이 필요없고 hosts 를 http 로 설정해줬다.
-
-### 8. Kibana 실행
-
-```sh
-
-sudo /bin/systemctl daemon-reload
-
-  
-
-sudo /bin/systemctl enable kibana.service
-
-  
-
-sudo systemctl start kibana.service
-
-```
-
-### 9. Kibana 실행 확인
-
-```sh
-
-sudo systemctl status kibana
-
-```
-
-### 10. Nginx 설정
-
-```sh
-
-sudo vi /etc/nginx/sites-available/default
-
-```
-
-  
-
-```nginx
-
-server {
-        listen 80;
-        
-        client_max_body_size 50M;
-        
-        server_name _;
-        
-        location / {
-                proxy_pass http://localhost:5601;
-                proxy_http_version 1.1;
-                proxy_set_header Upgrade $http_upgrade;
-                proxy_set_header Connection 'upgrade';
-                proxy_set_header Host $host;
-                proxy_cache_bypass $http_upgrade;
-        }
-}
-
-```
-
-  
-
-```sh
-
-sudo systemctl start nginx
-
-```
-
-
-접속해보면 ID, PW 로그인창이 떠있는걸 확인할 수 있다.
-
-
-![image](https://github.com/TeTedo/spring-security-practice/assets/107897812/6e823732-74da-4fef-919f-0090a7d2d916)
-
-
-### 11. Logstash 설치
-
-  
-
-```sh
-
-wget -qO - https://artifacts.elastic.co/GPG-KEY-elasticsearch | sudo gpg --dearmor -o /usr/share/keyrings/elasticsearch-keyring.gpg
-sudo apt-get install apt-transport-https
-echo "deb [signed-by=/usr/share/keyrings/elasticsearch-keyring.gpg] https://artifacts.elastic.co/packages/8.x/apt stable main" | sudo tee /etc/apt/sources.list.d/elastic-8.x.list
-```
-
-```sh
-
-sudo apt-get update && sudo apt-get install logstash
-
-```
-
-나는 logstash를 다른 서버에서 새로 설치했다.
-
-### 12. Logstash Input, Output 설정
-
-```sh
-
-sudo vi /etc/logstash/conf.d/logstash.conf
-
-```
-
-  
-
-```c
-
-input {
-
-  beats {
-
-    port => 5044
-
-    host => "0.0.0.0"
-
-  }
-
-}
-
-  
-
-filter {
-
-}
-
-  
-
-output {
-
-  elasticsearch {
-
-    hosts => ["[es-ip]:9200"]
-
-    index => "%{[@metadata][beat]}-%{[@metadata][version]}-%{+YYYY.MM.dd}"
-
-    user => "elastic"
-
-    password => "비밀번호"
-
-  }
-
-}
-
-```
-
-### 13. Logstash test
-
-  
-```sh
-
-sudo -u logstash /usr/share/logstash/bin/logstash --path.settings /etc/logstash -t
-
-```
-
-  
-
-```
-Using bundled JDK: /usr/share/logstash/jdk
-Sending Logstash logs to /var/log/logstash which is now configured via log4j2.properties
-[2023-11-10T03:06:15,008][INFO ][logstash.runner          ] Log4j configuration path used is: /etc/logstash/log4j2.properties
-[2023-11-10T03:06:15,014][INFO ][logstash.runner          ] Starting Logstash {"logstash.version"=>"8.11.0", "jruby.version"=>"jruby 9.4.2.0 (3.1.0) 2023-03-08 90d2913fda OpenJDK 64-Bit Server VM 17.0.9+9 on 17.0.9+9 +indy +jit [x86_64-linux]"}
-[2023-11-10T03:06:15,017][INFO ][logstash.runner          ] JVM bootstrap flags: [-Xms1g, -Xmx1g, -Djava.awt.headless=true, -Dfile.encoding=UTF-8, -Djruby.compile.invokedynamic=true, -XX:+HeapDumpOnOutOfMemoryError, -Djava.security.egd=file:/dev/urandom, -Dlog4j2.isThreadContextMapInheritable=true, -Djruby.regexp.interruptible=true, -Djdk.io.File.enableADS=true, --add-exports=jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED, --add-exports=jdk.compiler/com.sun.tools.javac.file=ALL-UNNAMED, --add-exports=jdk.compiler/com.sun.tools.javac.parser=ALL-UNNAMED, --add-exports=jdk.compiler/com.sun.tools.javac.tree=ALL-UNNAMED, --add-exports=jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED, --add-opens=java.base/java.security=ALL-UNNAMED, --add-opens=java.base/java.io=ALL-UNNAMED, --add-opens=java.base/java.nio.channels=ALL-UNNAMED, --add-opens=java.base/sun.nio.ch=ALL-UNNAMED, --add-opens=java.management/sun.management=ALL-UNNAMED]
-[2023-11-10T03:06:15,732][INFO ][org.reflections.Reflections] Reflections took 136 ms to scan 1 urls, producing 132 keys and 464 values
-[2023-11-10T03:06:16,134][INFO ][logstash.javapipeline    ] Pipeline `main` is configured with `pipeline.ecs_compatibility: v8` setting. All plugins in this pipeline will default to `ecs_compatibility => v8` unless explicitly configured otherwise.
-Configuration OK
-[2023-11-10T03:06:16,134][INFO ][logstash.runner          ] Using config.test_and_exit mode. Config Validation Result: OK. Exiting Logstash
-
-```
-
-### 14. Logstash 실행
-
-```sh
-
-sudo /bin/systemctl daemon-reload
-
-  
-
-sudo /bin/systemctl enable logstash.service
-
-  
-
-sudo systemctl start logstash.service
-
-```
-
-
-### 15. Kibana Security 설정
-
-#### [security 연결 - 공식문서 참고](https://www.elastic.co/guide/en/elasticsearch/reference/8.10/configuring-stack-security.html?blade=kibanasecuritymessage)
-
-#### 서비스 중지
-
-  
-
-```sh
-
-sudo systemctl stop elasticsearch.service
-
-sudo systemctl stop kibana.service
-
-  
-
-sudo systemctl stop logstash.service
-
-```
-
-#### elastic 설정
-
-  
-
-```sh
-
-sudo vi /etc/elasticsearch/elasticsearch.yml
-
-```
-
   ElasticSearch 7.x 버전까지는 아래 설정만 넣고 Kibana에 설정을 추가해주면 가능했다.
 
 ```yml
@@ -417,72 +125,262 @@ http.host: 0.0.0.0
 ```
 
 나의 경우 로드밸런서로 http ssl 을 설정해줬기 때문에 내부에서는 ssl 을 사용하지 않는다.
+### 5. ElasticSearch 실행
 
-```
+```sh
+
+sudo /bin/systemctl daemon-reload
+
+sudo /bin/systemctl enable elasticsearch.service
 
 sudo systemctl start elasticsearch.service
 
 ```
 
-#### 키바나 시작
+#### 암호 설정
 
+
+```sh
+sudo /usr/share/elasticsearch/bin/elasticsearch-setup-passwords interactive
 ```
 
-sudo systemctl start kibana.service
+만약 비밀번호가 이미 설정되어 있다고 하면 초기화 시키고 다시 설정할 수 있다.
 
+```sh
+sudo /usr/share/elasticsearch/bin/elasticsearch-reset-password -u elastic -i
 ```
+
+
+### 6. ElasticSearch 실행 확인
+
+```sh
+
+sudo systemctl status elasticsearch
+
   
-#### logstash 설정 추가
+curl -u elastic:[설정한 암호] -k "https://localhost:9200"
 
 ```
 
-sudo vi /etc/logstash/conf.d/logstash.conf
+
+### 7. Kibana 설치
+
+  
+
+```sh
+
+sudo apt-get update && sudo apt-get install kibana
 
 ```
 
-#### 주석 처리한곳 설정
+#### 설정 변경
 
+```sh
+sudo vi /etc/kibana/kibana.yml
+```
+
+```yml
+server.host: "0.0.0.0"
+
+elasticsearch.hosts: ["http://localhost:9200"]
+elasticsearch.username: "sketch"
+elasticsearch.password: "password"
+
+logging:
+  appenders:
+    file:
+      type: file
+      fileName: /var/log/kibana/kibana.log
+      layout:
+        type: json
+  root:
+    appenders:
+      - default
+      - file
+
+pid.file: /run/kibana/kibana.pid
+```
+
+나는 로드밸런서에서 SSL 을 종료하기 때문에 내부에서는 http 통신으로 한다.
+따라서 위 설정이 필요없고 hosts 를 http 로 설정해줬다.
+
+### 8. Kibana 실행
+
+```sh
+sudo /bin/systemctl daemon-reload
+sudo /bin/systemctl enable kibana.service
+sudo systemctl start kibana.service
+```
+
+### 9. Kibana 실행 확인
+
+```sh
+
+sudo systemctl status kibana
 
 ```
 
-output {
+### 10. Nginx 설정
 
-	elasticsearch {
-	
-	hosts => ["http://localhost:9200"]
-	
-	index => "%{[@metadata][beat]}-%{[@metadata][version]}-%{+YYYY.MM.dd}"
-	
-	user => "elastic"
-	
-	password => "설정한 비밀번호"
-	
-	}
+```sh
 
+sudo vi /etc/nginx/sites-available/default
+
+```
+
+  
+
+```nginx
+
+server {
+        listen 80;
+        
+        client_max_body_size 50M;
+        
+        server_name _;
+        
+        location / {
+                proxy_pass http://localhost:5601;
+                proxy_http_version 1.1;
+                proxy_set_header Upgrade $http_upgrade;
+                proxy_set_header Connection 'upgrade';
+                proxy_set_header Host $host;
+                proxy_cache_bypass $http_upgrade;
+        }
 }
 
 ```
 
 
-### 19. filebeat 설치
+```sh
+
+sudo systemctl start nginx
+
+```
+
+
+접속해보면 ID, PW 로그인창이 떠있는걸 확인할 수 있다.
+
+
+![image](https://github.com/TeTedo/spring-security-practice/assets/107897812/6e823732-74da-4fef-919f-0090a7d2d916)
+
+
+### 11. Logstash 설치 (새로운 서버에 jdk 설치해주고 설치)
+
+  
+
+```sh
+
+wget -qO - https://artifacts.elastic.co/GPG-KEY-elasticsearch | sudo gpg --dearmor -o /usr/share/keyrings/elastic-keyring.gpg
+sudo apt-get install apt-transport-https
+echo "deb [signed-by=/usr/share/keyrings/elasticsearch-keyring.gpg] https://artifacts.elastic.co/packages/8.x/apt stable main" | sudo tee /etc/apt/sources.list.d/elastic-8.x.list
+```
+
+```sh
+
+sudo apt-get update && sudo apt-get install logstash
+
+```
+
+나는 logstash를 다른 서버에서 새로 설치했다.
+
+### 12. Logstash Input, Output 설정
+
+```sh
+sudo vi /etc/logstash/conf.d/logstash.conf
+```
+
+  
+
+```c
+
+input {
+
+  beats {
+
+    port => 5044
+
+    host => "0.0.0.0"
+
+  }
+
+}
+
+  
+
+filter {
+
+}
+
+  
+
+output {
+
+  elasticsearch {
+
+    hosts => ["[es-ip]"]
+
+    index => "%{[@metadata][beat]}-%{[@metadata][version]}-%{+YYYY.MM.dd}"
+
+    user => "elastic"
+
+    password => "비밀번호"
+
+  }
+
+}
+
+```
+
+### 13. Logstash test
+
+  
+```sh
+
+sudo -u logstash /usr/share/logstash/bin/logstash --path.settings /etc/logstash -t
+
+```
 
   
 
 ```
-curl -L -O https://artifacts.elastic.co/downloads/beats/filebeat/filebeat-8.10.4-amd64.deb
-sudo dpkg -i filebeat-8.10.4-amd64.deb
+Using bundled JDK: /usr/share/logstash/jdk
+Sending Logstash logs to /var/log/logstash which is now configured via log4j2.properties
+[2023-11-10T03:06:15,008][INFO ][logstash.runner          ] Log4j configuration path used is: /etc/logstash/log4j2.properties
+[2023-11-10T03:06:15,014][INFO ][logstash.runner          ] Starting Logstash {"logstash.version"=>"8.11.0", "jruby.version"=>"jruby 9.4.2.0 (3.1.0) 2023-03-08 90d2913fda OpenJDK 64-Bit Server VM 17.0.9+9 on 17.0.9+9 +indy +jit [x86_64-linux]"}
+[2023-11-10T03:06:15,017][INFO ][logstash.runner          ] JVM bootstrap flags: [-Xms1g, -Xmx1g, -Djava.awt.headless=true, -Dfile.encoding=UTF-8, -Djruby.compile.invokedynamic=true, -XX:+HeapDumpOnOutOfMemoryError, -Djava.security.egd=file:/dev/urandom, -Dlog4j2.isThreadContextMapInheritable=true, -Djruby.regexp.interruptible=true, -Djdk.io.File.enableADS=true, --add-exports=jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED, --add-exports=jdk.compiler/com.sun.tools.javac.file=ALL-UNNAMED, --add-exports=jdk.compiler/com.sun.tools.javac.parser=ALL-UNNAMED, --add-exports=jdk.compiler/com.sun.tools.javac.tree=ALL-UNNAMED, --add-exports=jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED, --add-opens=java.base/java.security=ALL-UNNAMED, --add-opens=java.base/java.io=ALL-UNNAMED, --add-opens=java.base/java.nio.channels=ALL-UNNAMED, --add-opens=java.base/sun.nio.ch=ALL-UNNAMED, --add-opens=java.management/sun.management=ALL-UNNAMED]
+[2023-11-10T03:06:15,732][INFO ][org.reflections.Reflections] Reflections took 136 ms to scan 1 urls, producing 132 keys and 464 values
+[2023-11-10T03:06:16,134][INFO ][logstash.javapipeline    ] Pipeline `main` is configured with `pipeline.ecs_compatibility: v8` setting. All plugins in this pipeline will default to `ecs_compatibility => v8` unless explicitly configured otherwise.
+Configuration OK
+[2023-11-10T03:06:16,134][INFO ][logstash.runner          ] Using config.test_and_exit mode. Config Validation Result: OK. Exiting Logstash
 
 ```
 
-### 20. filebeat 설정 변경
+### 14. Logstash 실행
+
+```sh
+sudo /bin/systemctl daemon-reload
+sudo /bin/systemctl enable logstash.service
+sudo systemctl start logstash.service
+```
+
+### 15. filebeat 설치
+
+```bash
+curl -L -O https://artifacts.elastic.co/downloads/beats/filebeat/filebeat-8.11.0-amd64.deb
+sudo dpkg -i filebeat-8.11.0-amd64.deb
 
 ```
+
+### 16. filebeat 설정 변경
+
+```bash
 
 sudo vi /etc/filebeat/filebeat.yml
 
 ```
 
-```
+```yml
 type: log
   id: test_log
   enabled: true
@@ -515,7 +413,7 @@ filebeat.modules:
 참고로 filebeat와 logstash는 tcp통신을 한다.
 이부분에서 나도 애를 많이 먹었다.
 당연히 http 통신을 할 줄 알았지만 tcp로 통신한단다.
-#### 21. filebeat 모듈 설정
+### 17. filebeat 모듈 설정
 
 ```
 sudo filebeat modules list
@@ -523,9 +421,9 @@ filebeat modules enable [모듈]
 ```
   
 
-#### 22. filebeat 시작
+### 18. filebeat 시작
 
-```
+```bash
 sudo /bin/systemctl daemon-reload
 
 sudo /bin/systemctl enable filebeat.service
@@ -533,8 +431,110 @@ sudo /bin/systemctl enable filebeat.service
 sudo systemctl start filebeat.service
 ```
 
+### 19. heartbeat 설치
 
-#### 23. 겪은 이슈
+인스턴스의 ICMP로 Health Check를 하기 위해 logstash 서버에 heartbeat를 설치한 후 logstash로 보내는걸 목적으로 한다.
+
+```bash
+curl -L -O https://artifacts.elastic.co/downloads/beats/heartbeat/heartbeat-8.11.0-amd64.deb
+sudo dpkg -i heartbeat-8.11.0-amd64.deb
+sudo apt-get update
+```
+
+### 20. heartbeat 설정 변경
+
+```
+sudo vi /etc/heartbeat/heartbeat.yml
+```
+
+```yml
+############################ Heartbeat ######################################
+
+# Define a directory from which to load monitor definitions. Definitions take the form
+# of individual yaml files.
+heartbeat.config.monitors:
+  # Directory + glob pattern to search for configuration files
+  path: ${path.config}/monitors.d/*.yml
+  # If enabled, heartbeat will periodically check the config.monitors path for changes
+  reload.enabled: false
+  # How often to check for changes
+  reload.period: 5s
+
+# Configure monitors inline
+heartbeat.monitors:
+- type: icmp
+  id: icmp-monitor
+  # Human readable display name for this service in Uptime UI and elsewhere
+  name: ICMP Monitor
+  # List of URLs to query
+  hosts: ["모니터링할 서버 ip"]
+  # Configure task schedule
+  schedule: '@every 30s'
+  # Total test connection and data exchange timeout
+  #timeout: 16s
+  # Name of corresponding APM service, if Elastic APM is in use for the monitored service.
+  #service.name: my-apm-service-name
+
+# Experimental: Set this to true to run heartbeat monitors exactly once at startup
+#heartbeat.run_once: true
+
+# ======================= Elasticsearch template setting =======================
+
+setup.template.settings:
+  index.number_of_shards: 1
+  index.codec: best_compression
+  #_source.enabled: false
+
+# =================================== Kibana ===================================
+
+# Starting with Beats version 6.0.0, the dashboards are loaded via the Kibana API.
+# This requires a Kibana endpoint configuration.
+setup.kibana:
+
+  # Kibana Host
+  # Scheme and port can be left out and will be set to the default (http and 5601)
+  # In case you specify and additional path, the scheme is required: http://localhost:5601/path
+  # IPv6 addresses should always be defined as: https://[2001:db8::1]:5601
+  host: "[kibana host]"
+  username: "elastic"
+  password: "비밀번호"
+
+  # Kibana Space ID
+  # ID of the Kibana Space into which the dashboards should be loaded. By default,
+  # the Default Space will be used.
+  #space.id:
+
+# ------------------------------ Logstash Output -------------------------------
+output.logstash:
+  # The Logstash hosts
+  hosts: ["localhost:5044"]
+
+  # Optional SSL. By default is off.
+  # List of root certificates for HTTPS server verifications
+  #ssl.certificate_authorities: ["/etc/pki/root/ca.pem"]
+
+  # Certificate for SSL client authentication
+  #ssl.certificate: "/etc/pki/client/cert.pem"
+
+  # Client Certificate Key
+  #ssl.key: "/etc/pki/client/cert.key"
+# ================================= Processors =================================
+
+processors:
+  - add_observer_metadata: ~
+  - add_host_metadata: ~
+
+      # Optional, but recommended geo settings for the location Heartbeat is running in
+      #geo:
+        # Token describing this location
+        #name: us-east-1a
+        # Lat, Lon "
+        #location: "37.926868, -78.024902"
+:wq
+
+
+```
+#### 21. 겪은 이슈
 
 #### (1) 버전호환
 
@@ -591,7 +591,7 @@ SSL Passthrough는 로드밸런서가 SSL 연결을 백엔드 서버까지 그�
 
 
 
-### 24. 느낀점
+### 22. 느낀점
 
 그냥 설치하고 실행시키면 끝날줄 알았는데 생각보다 많은 삽질을 했다.
 특히 ssl 관련 삽질을 굉장히 많이 했다.
