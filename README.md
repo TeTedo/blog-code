@@ -6,6 +6,8 @@
 
 - [JPA N+1의 모든 것](https://github.com/TeTedo/blog-code/tree/main/spring-boot-jpa-N%2B1)
 
+- [maven에서 querydsl Q class 생성](https://github.com/TeTedo/blog-code/blob/main/querydsl-maven-setting/README.md)
+
 ### Security
 
 - [spring-security OAuth2 Google login](https://github.com/TeTedo/blog-code/tree/main/spring-security-oauth)
