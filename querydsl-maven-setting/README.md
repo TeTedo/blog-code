@@ -1,0 +1,1 @@
+# aven에서 querydsl Q class 생성
