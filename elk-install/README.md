@@ -1,6 +1,9 @@
 
 ### 환경
-Elastic Search 와 Kibana는 같은 instance, Logstash, filebeat 총 3개의 인스턴스로 테스트를 진행했다.
+Elastic Search 와 Kibana는 같은 인스턴스, Logstash, filebeat 총 3개의 인스턴스로 테스트를 진행했다.
+
+aws ec2
+ubuntu 22.04
 
 
 ### 1-1. Java 설치
@@ -62,110 +65,19 @@ sudo apt-get update && sudo apt-get install elasticsearch
 
 ```
 
-#### 4. 설정 수정 (8.x 는 security 쪽 설정이 true로 되어있음)
+### 4. ElasticSearch 실행
 
 ```sh
 
-sudo vi /etc/elasticsearch/elasticsearch.yml
+sudo systemctl daemon-reload
 
-```
-
-  ElasticSearch 7.x 버전까지는 아래 설정만 넣고 Kibana에 설정을 추가해주면 가능했다.
-
-```yml
-
-xpack.security.enabled: true
-xpack.security.transport.ssl.enabled: true
-
-```
-
-
-하지만 8.x 버전부터는 ssl의 keystore를 필수적으로 입력해야 하는데 elasticsearch를 설치할때 자동으로 설치해준다. 
-#### Elastic Search 8.x 버전 security 설정
-[Security 설정 공식문서](https://www.elastic.co/guide/en/elasticsearch/reference/8.10/configuring-stack-security.html?blade=kibanasecuritymessage)
-
-
-```sh
-#----------------------- BEGIN SECURITY AUTO CONFIGURATION -----------------------
-#
-# The following settings, TLS certificates, and keys have been automatically      
-# generated to configure Elasticsearch security features on 09-11-2023 07:40:42
-#
-# --------------------------------------------------------------------------------
-# Enable security features
-xpack.security.enabled: true
-
-xpack.security.enrollment.enabled: true
-
-# Enable encryption for HTTP API client connections, such as Kibana, Logstash, and Agents
-xpack.security.http.ssl:
-  enabled: false
-  keystore.path: certs/http.p12
-
-# Enable encryption and mutual authentication between cluster nodes
-xpack.security.transport.ssl:
-  enabled: true
-  verification_mode: certificate
-  keystore.path: certs/transport.p12
-  truststore.path: certs/transport.p12
-# Create a new cluster with the current node only
-# Additional nodes can still join the cluster later
-cluster.initial_master_nodes: ["node-1"]
-
-# Allow HTTP API connections from anywhere
-# Connections are encrypted and require user authentication
-http.host: 0.0.0.0
-
-# Allow other nodes to join the cluster from anywhere
-# Connections are encrypted and mutually authenticated
-#transport.host: 0.0.0.0
-
-#----------------------- END SECURITY AUTO CONFIGURATION -------------------------
-
-```
-
-나의 경우 로드밸런서로 http ssl 을 설정해줬기 때문에 내부에서는 ssl 을 사용하지 않는다.
-### 5. ElasticSearch 실행
-
-```sh
-
-sudo /bin/systemctl daemon-reload
-
-sudo /bin/systemctl enable elasticsearch.service
+sudo systemctl enable elasticsearch.service
 
 sudo systemctl start elasticsearch.service
 
 ```
 
-#### 암호 설정
-
-
-```sh
-sudo /usr/share/elasticsearch/bin/elasticsearch-setup-passwords interactive
-```
-
-만약 비밀번호가 이미 설정되어 있다고 하면 초기화 시키고 다시 설정할 수 있다.
-
-```sh
-sudo /usr/share/elasticsearch/bin/elasticsearch-reset-password -u elastic -i
-```
-
-
-### 6. ElasticSearch 실행 확인
-
-```sh
-
-sudo systemctl status elasticsearch
-
-  
-curl -u elastic:[설정한 암호] -k "https://localhost:9200"
-
-```
-
-
-### 7. Kibana 설치
-
-  
+### 5. Kibana 설치
 
 ```sh
 
@@ -173,7 +85,109 @@ sudo apt-get update && sudo apt-get install kibana
 
 ```
 
-#### 설정 변경
+### 6. Kibana 실행
+
+```sh
+sudo systemctl daemon-reload
+sudo systemctl enable kibana.service
+sudo systemctl start kibana.service
+```
+
+### 7. Nginx 설정 및 시작
+
+```sh
+
+sudo vi /etc/nginx/nginx.conf
+
+```
+
+```nginx
+worker_processes  auto;
+
+error_log  /var/log/nginx/error.log notice;
+pid        /var/run/nginx.pid;
+
+
+events {
+    worker_connections  1024;
+}
+
+http {
+
+  upstream kibana {
+    server 127.0.0.1:5601 max_fails=3 fail_timeout=30s;
+}
+
+  server {
+    listen 80;
+
+    location / {
+          proxy_pass          http://kibana;
+          proxy_set_header    X-Real-IP           $remote_addr;
+          proxy_set_header    X-Forwarded-For     $proxy_add_x_forwarded_for;
+          proxy_set_header    Host                $http_host;
+    }
+  }
+
+  include /etc/nginx/conf.d/*.conf;
+}
+
+
+```
+
+```sh
+sudo systemctl enable nginx.service
+sudo systemctl restart nginx.service
+```
+
+![image](https://github.com/TeTedo/blog-code/assets/107897812/daab44bb-53d6-4b8e-a6ab-ecc19d5afceb)
+
+설정을 하고 접속해보면 위와 같은 화면이 나온다.
+
+나는 여기서 추가로 security를 설정하여 id, pw로 로그인할 수 있도록 설정하려고 한다.
+
+예전에는 elastic 이라는 username으로 superuser 권한이 부여되고 kibana에도 적용해줄수 있었지만 8.0부터는 아니라고 한다. [elastic forbid issue 참고](https://github.com/elastic/kibana/pull/122722)
+
+그래서 kibana 라는 유저로 kibana.yml에 추가해 주려고 한다.
+#### 8. 설정 파일 수정
+
+**(1) kibana 유저 비밀번호 설정**
+
+```sh
+sudo /usr/share/elasticsearch/bin/elasticsearch-reset-password -u kibana -i
+```
+
+**(2) elasticsearch.yml 파일 수정**
+
+나는 내부에 ssl 을 설정하지 않고 aws 로드밸런서에서 처리를 해주기 때문에 `xpack.security.http.ssl` 설정을 false로 처리한다.
+
+```sh
+sudo vi /etc/elasticsearch/elasticsearch.yml
+```
+
+```yml
+path.data: /var/lib/elasticsearch
+path.logs: /var/log/elasticsearch
+
+xpack.security.enabled: true
+
+xpack.security.enrollment.enabled: true
+
+xpack.security.http.ssl:
+  enabled: false
+  keystore.path: certs/http.p12
+
+xpack.security.transport.ssl:
+  enabled: true
+  verification_mode: certificate
+  keystore.path: certs/transport.p12
+  truststore.path: certs/transport.p12
+cluster.initial_master_nodes: ["master-node"]
+
+http.host: 0.0.0.0
+```
+
+**(3) kibana.yml 파일 수정**
 
 ```sh
 sudo vi /etc/kibana/kibana.yml
@@ -183,8 +197,8 @@ sudo vi /etc/kibana/kibana.yml
 server.host: "0.0.0.0"
 
 elasticsearch.hosts: ["http://localhost:9200"]
-elasticsearch.username: "sketch"
-elasticsearch.password: "password"
+elasticsearch.username: "kibana"
+elasticsearch.password: "위에서 설정했던 비밀번호"
 
 logging:
   appenders:
@@ -201,78 +215,37 @@ logging:
 pid.file: /run/kibana/kibana.pid
 ```
 
-나는 로드밸런서에서 SSL 을 종료하기 때문에 내부에서는 http 통신으로 한다.
-따라서 위 설정이 필요없고 hosts 를 http 로 설정해줬다.
+elasticsearch.username을 elastic으로 설정하게 되면 권한 오류가 뜨게 된다.
+그래서 kibana로 username을 설정해줬다.
 
-### 8. Kibana 실행
-
-```sh
-sudo /bin/systemctl daemon-reload
-sudo /bin/systemctl enable kibana.service
-sudo systemctl start kibana.service
-```
-
-### 9. Kibana 실행 확인
+위 설정들을 마치고 kibana와 elasticsearch를 재시작 해준다.
 
 ```sh
-
-sudo systemctl status kibana
-
+sudo systemctl restart elasticsearch.service
+sudo systemctl restart kibana.service
 ```
 
-### 10. Nginx 설정
-
-```sh
-
-sudo vi /etc/nginx/sites-available/default
-
-```
-
-  
-
-```nginx
-
-server {
-        listen 80;
-        
-        client_max_body_size 50M;
-        
-        server_name _;
-        
-        location / {
-                proxy_pass http://localhost:5601;
-                proxy_http_version 1.1;
-                proxy_set_header Upgrade $http_upgrade;
-                proxy_set_header Connection 'upgrade';
-                proxy_set_header Host $host;
-                proxy_cache_bypass $http_upgrade;
-        }
-}
-
-```
-
-
-```sh
-
-sudo systemctl start nginx
-
-```
-
-
-접속해보면 ID, PW 로그인창이 떠있는걸 확인할 수 있다.
-
+실행 후 다시 키바나 홈페이지에 들어가보면 아래와 같이 username, password를 입력하는게 생겼다.
 
 ![image](https://github.com/TeTedo/spring-security-practice/assets/107897812/6e823732-74da-4fef-919f-0090a7d2d916)
 
+### 9. Logstash 설치 (새로운 서버에 jdk 설치해주고 설치)
 
-### 11. Logstash 설치 (새로운 서버에 jdk 설치해주고 설치)
+```
+sudo apt-get update
 
-  
+sudo apt install openjdk-17-jdk
+```
 
 ```sh
+wget -qO - https://artifacts.elastic.co/GPG-KEY-elasticsearch | sudo gpg --dearmor -o /usr/share/keyrings/elasticsearch-keyring.gpg
+```
 
-wget -qO - https://artifacts.elastic.co/GPG-KEY-elasticsearch | sudo gpg --dearmor -o /usr/share/keyrings/elastic-keyring.gpg
+```sh
 sudo apt-get install apt-transport-https
+```
+
+```sh
 echo "deb [signed-by=/usr/share/keyrings/elasticsearch-keyring.gpg] https://artifacts.elastic.co/packages/8.x/apt stable main" | sudo tee /etc/apt/sources.list.d/elastic-8.x.list
 ```
 
@@ -284,13 +257,14 @@ sudo apt-get update && sudo apt-get install logstash
 
 나는 logstash를 다른 서버에서 새로 설치했다.
 
-### 12. Logstash Input, Output 설정
+### 10. Logstash Input, Output 설정
 
 ```sh
 sudo vi /etc/logstash/conf.d/logstash.conf
 ```
 
-  
+아래 username, password 부분은 kibana에서 user를 새로 만들어서 넣어줘도 되고 elastic 유저를 써도 된다.
+
 
 ```c
 
@@ -309,7 +283,11 @@ input {
   
 
 filter {
-
+  if [agent][type] == "heartbeat" {
+    mutate {
+      add_field => { "[host][hostname]" => "%{[monitor][name]}" }
+    }
+  }
 }
 
   
@@ -318,11 +296,11 @@ output {
 
   elasticsearch {
 
-    hosts => ["[es-ip]"]
+    hosts => ["[elasticsearch-ip:9200]"]
 
     index => "%{[@metadata][beat]}-%{[@metadata][version]}-%{+YYYY.MM.dd}"
 
-    user => "elastic"
+    user => "kibana"
 
     password => "비밀번호"
 
@@ -332,16 +310,16 @@ output {
 
 ```
 
-### 13. Logstash test
+7.5 버전까지는 heartbeat에서 hostname을 지원해줬다고 하지만 이제는 지원해주지 않는다.[host.name 관련 github issue 참고](https://github.com/elastic/beats/issues/12107)
 
-  
+그래서 나중에 시각화를 위해 hostname 필드를 수동으로 filter에서 넣어줬다.
+### 11. Logstash test
+
 ```sh
-
 sudo -u logstash /usr/share/logstash/bin/logstash --path.settings /etc/logstash -t
-
 ```
 
-  
+위 명령어를 입력하면 아래와 같이 cli에 나타난다. 맨아래 OK 가 보이면 된다.
 
 ```
 Using bundled JDK: /usr/share/logstash/jdk
@@ -356,7 +334,7 @@ Configuration OK
 
 ```
 
-### 14. Logstash 실행
+### 12. Logstash 실행
 
 ```sh
 sudo /bin/systemctl daemon-reload
@@ -364,15 +342,14 @@ sudo /bin/systemctl enable logstash.service
 sudo systemctl start logstash.service
 ```
 
-### 15. filebeat 설치
+### 13. filebeat 설치 (다른 새로운 ec2 인스턴스에 설치)
 
 ```bash
 curl -L -O https://artifacts.elastic.co/downloads/beats/filebeat/filebeat-8.11.0-amd64.deb
 sudo dpkg -i filebeat-8.11.0-amd64.deb
-
 ```
 
-### 16. filebeat 설정 변경
+### 14. filebeat 설정 변경
 
 ```bash
 
@@ -412,8 +389,9 @@ filebeat.modules:
 
 참고로 filebeat와 logstash는 tcp통신을 한다.
 이부분에서 나도 애를 많이 먹었다.
-당연히 http 통신을 할 줄 알았지만 tcp로 통신한단다.
-### 17. filebeat 모듈 설정
+당연히 http 통신을 할 줄 알았지만 tcp로 통신한다고 한다.
+단순히 패킷을 전달하는거라 
+### 15. filebeat 모듈 설정
 
 ```
 sudo filebeat modules list
@@ -421,7 +399,7 @@ filebeat modules enable [모듈]
 ```
   
 
-### 18. filebeat 시작
+### 16. filebeat 시작
 
 ```bash
 sudo /bin/systemctl daemon-reload
@@ -431,7 +409,7 @@ sudo /bin/systemctl enable filebeat.service
 sudo systemctl start filebeat.service
 ```
 
-### 19. heartbeat 설치
+### 17. heartbeat 설치
 
 인스턴스의 ICMP로 Health Check를 하기 위해 logstash 서버에 heartbeat를 설치한 후 logstash로 보내는걸 목적으로 한다.
 
@@ -441,7 +419,7 @@ sudo dpkg -i heartbeat-8.11.0-amd64.deb
 sudo apt-get update
 ```
 
-### 20. heartbeat 설정 변경
+### 18. heartbeat 설정 변경
 
 ```
 sudo vi /etc/heartbeat/heartbeat.yml
@@ -530,13 +508,11 @@ processors:
         #name: us-east-1a
         # Lat, Lon "
         #location: "37.926868, -78.024902"
-:wq
-
 
 ```
-#### 21. 겪은 이슈
+### 19. 겪은 이슈
 
-#### (1) 버전호환
+#### (1) logstash 에러
 
 ssl 적용 후 filebeat 설정에서 logstash의 host에도 https를 붙였지만 logstash의 호스트는 https 프로토콜을 붙이지 말아야 한다고 에러가 떴다.
 
@@ -547,14 +523,16 @@ ssl 적용 후 filebeat 설정에서 logstash의 host에도 https를 붙였지�
 
 그래도 logstash의 로그에서 오류가 떠서 살펴봤더니 `Invalid version of beats protocol: 69` 오류 였다.
 해당 오류는 beats의 버전이 맞지 않아 값을 읽을수 없다는 오류라고 한다.
-그래서 각 elk stack의 버전들을 확인해보니 filebeat만 혼자 7.17.8 버전이었고 나머지는 7.17.14버전이었다. 버전을 똑같이 7.17.14로 맞췄지만 그래도 protocol 관련한 오류가 떴다. 
-[호환성 공식문서](https://www.elastic.co/support/matrix)를 찾아보니 ubuntu 22.04는 8.3.x 이상 버전과 호환이 된다고 해서 원래 7.17 버전으로 세팅했었지만 현재 버전인 8.10 버전으로 다시 설치했다. 
+그래서 각 elk stack의 버전들을 확인해보니 filebeat만 혼자 다른 버전이었다. 버전을 똑같이 맞췄지만 그래도 protocol 관련한 오류가 떴다. 
+[호환성 공식문서](https://www.elastic.co/support/matrix)를 찾아보니 ubuntu 22.04는 8.3.x 이상 버전과 호환이 된다고 해서 원래 7.17 버전으로 세팅했었지만 현재 버전인 8.11 버전으로 다시 설치했다. 
 elasticsearch의 8.x 버전은 jdk 11 과 호환이 안되고 17과 호환이 된다고 해서 java도 다시 깔았다.
 
 #### (2) ElasticSearch, Kibana 연결
 
 7.x 버전을 하다가 8.x 버전을 세팅하니까 달라진게 많았다.
 가장 대표적으로 security 설정이었는데, 7.x 버전은 증명서를 넣지 않아도 됬지만 8.x버전은 꼭 명시해줘야 했다.
+
+그리고 kibana.yml에 명시해주는 elasticsearch.username 을 elastic 으로 사용하면 안된다.
 
 이부분 때문에 설정을 하다가 가장 많은 시간을 날렸다.
 공식문서를 봐도 elasticsearch, kibana 각각의 설정은 설명하지만 연결지어서 설명은 안해서 이해하기가 힘들었다.
@@ -589,6 +567,7 @@ SSL Termination은 로드밸런서에서 SSL연결이 종료되고 이후 내부
 
 SSL Passthrough는 로드밸런서가 SSL 연결을 백엔드 서버까지 그대로 전달하기 때문에 백엔드 서버에서 SSL 인증서를 가지고 있어야 한다.
 
+나는 SSL Termination만 사용하고 있었기 때문에 elasticsearch.yml 파일에서 `xpack.security.http.ssl` 이부분을 false로 처리해줬다.
 
 
 ### 22. 느낀점
@@ -602,9 +581,6 @@ SSL Passthrough는 로드밸런서가 SSL 연결을 백엔드 서버까지 그�
 
 세팅하면서 네트워크 부분의 지식도 조금은 늘어난것 같다.
 다음엔 metricbeat를 설치해서 metric에 대한 정보를 시각화하는걸 목표로 한다.
-
-
-
 
 ### 참고
 
