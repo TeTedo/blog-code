@@ -1,5 +1,13 @@
 # blog-code
 
+# Project
+
+## [Around Flavor](https://aroundflavor.tetedo.com/)
+
+주변에 있는 음식점 랜덤 찾기
+
+👉(후기 보러 가기)[https://github.com/TeTedo/blog-code/tree/main/AroundFlavor]
+
 # Spring
 
 - [rest-docs로 API 문서 관리하기](https://github.com/TeTedo/blog-code/tree/main/spring-rest-docs)
