@@ -8,6 +8,10 @@
 
 👉[후기 보러 가기](https://github.com/TeTedo/blog-code/tree/main/AroundFlavor)
 
+# CS
+
+- [DNS란 무엇인가?](https://github.com/TeTedo/blog-code/tree/main/cs-dns)
+
 # Spring
 
 - [rest-docs로 API 문서 관리하기](https://github.com/TeTedo/blog-code/tree/main/spring-rest-docs)
