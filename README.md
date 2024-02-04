@@ -1,5 +1,3 @@
-# blog-code
-
 # Project
 
 ## [Around Flavor] 👉 [웹 바로 가기](https://aroundflavor.tetedo.com/)
