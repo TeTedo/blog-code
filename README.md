@@ -12,11 +12,15 @@
 
 # Spring
 
+### Docs
+
 - [rest-docs로 API 문서 관리하기](https://github.com/TeTedo/blog-code/tree/main/spring-rest-docs)
+
+### Data
 
 - [JPA N+1의 모든 것](https://github.com/TeTedo/blog-code/tree/main/spring-boot-jpa-N%2B1)
 
-- [maven에서 querydsl Q class 생성](https://github.com/TeTedo/blog-code/blob/main/querydsl-maven-setting/README.md)
+- [maven에서 querydsl Q class 생성](https://github.com/TeTedo/blog-code/tree/main/querydsl-maven-setting)
 
 ### Security
 
