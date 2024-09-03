@@ -1,0 +1,6 @@
+spring:
+  application:
+    name: jackson
+
+server:
+  port: 8085
