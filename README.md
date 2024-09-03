@@ -22,6 +22,10 @@
 
 - [maven에서 querydsl Q class 생성](https://github.com/TeTedo/blog-code/tree/main/querydsl-maven-setting)
 
+### jackson
+
+- [JsonDeserialize 활용해서 요청 Body 커스텀하기](https://github.com/TeTedo/blog-code/tree/main/spring-boot-jackson)
+
 ### Security
 
 - [spring-security OAuth2 Google login](https://github.com/TeTedo/blog-code/tree/main/spring-security-oauth)
