@@ -1,4 +1,4 @@
-# SpringBoot JsonSerialize 활용해서 요청 Body 커스텀하기
+# SpringBoot JsonDeserialize 활용해서 요청 Body 커스텀하기
 
 > 모든 코드는 [Github](https://github.com/TeTedo/blog-code/tree/main/spring-boot-jackson)에 저장되어 있습니다.
 
