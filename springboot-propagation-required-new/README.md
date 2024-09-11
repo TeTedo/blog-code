@@ -1,4 +1,6 @@
-# Propagation.REQUIRES_NEW 쓰면 된다면서요
+# Propagation.REQUIRES_NEW에서 겪은 이슈
+
+> 모든 코드는 [Github](https://github.com/TeTedo/blog-code/tree/main/spring-boot-jackson)에 저장되어 있습니다.
 
 > ### 이슈
 >
@@ -61,21 +63,21 @@ Spring에서는 Default로 REQUIRED 속성을 사용하는데 이는 기존 트�
 @Service
 @RequiredArgsConstructor
 public class AService {
-
     private final ARepository aRepository;
 
     @Transactional
     public void main() {
-        A a = aRepository.findById(1L)
-                .orElseThrow(IllegalStateException::new);
-
-        one(a);
+        A a = one();
         two(a);
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void one(A a) {
+    public A one() {
+        A a = aRepository.findById(1L)
+                .orElseThrow(IllegalStateException::new);
+
         a.setState("state2");
+        return a;
     }
 
     @Transactional
@@ -89,63 +91,55 @@ public class AService {
 
 ## 4. Test
 
+테스트 코드를 작성하여 테스트를 해보고 싶었지만 테스트 환경에서의 트랜잭션은 중간에 commit 되지 않는다고 하여 debug로 테스트 해본다.
+
+> 디버그로 테스트 결과 one을 실행시켰더니 select문의 쿼리만 실행됐고 모든 트랜잭션이 끝난 이후 update 쿼리가 실행됐다. 결과는 "state2"로 상태가 바뀌었다.
+
+먼저 예상한 REQUIRES_NEW의 동작이 잘 안된 이유부터 찾아본다.
+
+그 이유로는 Spring의 Transactional의 동작방식에 있었다.
+
+간단하게 Transactional의 동작방식은 proxy 객체를 이용하는데 이때 동일 클래스에 있으면 새로운 proxy 객체를 만들지 않는것 같았다.
+
+그래서 다른 서비스를 만들어 테스트를 진행했다.
+
 ```java
-@SpringBootTest
-class AServiceTest {
+public class BService {
 
-    @Autowired
-    private AService aService;
+    private final ARepository aRepository;
 
-    @Autowired
-    private ARepository aRepository;
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public A one() {
+        A a = aRepository.findById(1L)
+                .orElseThrow(IllegalStateException::new);
 
-    @BeforeEach
-    public void setup() {
-        A entity = new A();
-        entity.setId(1L);
-        entity.setState("state1");
-        aRepository.save(entity);
+        a.setState("state2");
+        return a;
+    }
+
+    @Transactional
+    public void two(A a) {
+        a.setState("state3");
     }
 }
-```
 
-먼저 Test를 세팅 해줬고 main 메소드가 잘 실행되는지부터 테스트 해본다.
-
-```java
-@Test
-public void mainTest() {
-    aService.main();
-
-    A updatedEntity = aRepository.findById(1L).orElseThrow();
-    assertEquals("state3", updatedEntity.getState());
-}
-```
-
-> 테스트 성공
-
-다음으로 실제 main 메서드와 비슷한 환경으로 테스트를 만들어봤다.
-
-```java
-@Test
 @Transactional
-public void 메인메소드와_비슷한_환경의_테스트() {
-    A a = aRepository.findById(1L)
-            .orElseThrow();
-
-    aService.one(a);
-    aService.two(a);
-
-    A updatedEntity = aRepository.findById(1L).orElseThrow();
-    assertEquals("state3", updatedEntity.getState());
+public void main2() {
+    A a = bService.one();
+    bService.two(a);
 }
 ```
 
-> 테스트 성공 - 다음으로 one 메소드 실행 이후 커밋이 되는지 확인해본다.
+> 디버그로 찍어본 결과 one이 실행되면 select와 update 쿼리 두개가 실행됐다. 하지만 마찬가지로 "state2"로 결과가 나왔다.
 
-```
+여기서 문제는 트랜잭션의 범위이다.
 
-```
+select 쿼리가 REQUIRES_NEW로 새로운 물리 트랜잭션 안에서 조회했기때문에 이 안에서만 영속성 컨텍스트가 적용된 것으로 추측한다.
+
+나는 같은 클래스안에서 REQUIRES_NEW를 사용해서 문제가 됬었고 해결했다. 끝..
 
 ## 참고
 
 - [[Spring] 스프링의 트랜잭션 전파 속성(Transaction propagation) 완벽하게 이해하기](https://mangkyu.tistory.com/269)
+
+- [Spring @Transactional 사용시 주의할점](https://velog.io/@roro/Spring-Transactional-%EC%82%AC%EC%9A%A9%EC%8B%9C-%EC%A3%BC%EC%9D%98%ED%95%A0%EC%A0%90)

@@ -14,8 +14,12 @@ public class BService {
     private final ARepository aRepository;
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void one(A a) {
+    public A one() {
+        A a = aRepository.findById(1L)
+                .orElseThrow(IllegalStateException::new);
+
         a.setState("state2");
+        return a;
     }
 
     @Transactional

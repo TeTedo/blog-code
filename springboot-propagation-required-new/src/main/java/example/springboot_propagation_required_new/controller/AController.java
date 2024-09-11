@@ -15,4 +15,9 @@ public class AController {
     public void aTest() {
         aService.main();
     }
+
+    @GetMapping("/test2")
+    public void aTest2() {
+        aService.main2();
+    }
 }

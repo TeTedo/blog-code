@@ -12,6 +12,10 @@
 
 # Spring
 
+### Transaction
+
+- [Propagation.REQUIRES_NEW에서 겪은 이슈](https://github.com/TeTedo/blog-code/tree/main/springboot-propagation-required-new)
+
 ### Docs
 
 - [rest-docs로 API 문서 관리하기](https://github.com/TeTedo/blog-code/tree/main/spring-rest-docs)

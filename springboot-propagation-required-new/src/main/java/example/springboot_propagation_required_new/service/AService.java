@@ -13,19 +13,27 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class AService {
     private final ARepository aRepository;
+    private final BService bService;
 
     @Transactional
     public void main() {
-        A a = aRepository.findById(1L)
-                .orElseThrow(IllegalStateException::new);
-
-        one(a);
+        A a = one();
         two(a);
     }
 
+    @Transactional
+    public void main2() {
+        A a = bService.one();
+        bService.two(a);
+    }
+
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void one(A a) {
+    public A one() {
+        A a = aRepository.findById(1L)
+                .orElseThrow(IllegalStateException::new);
+
         a.setState("state2");
+        return a;
     }
 
     @Transactional
