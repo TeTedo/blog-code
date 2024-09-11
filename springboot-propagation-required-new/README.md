@@ -1,6 +1,6 @@
 # Propagation.REQUIRES_NEW에서 겪은 이슈
 
-> 모든 코드는 [Github](https://github.com/TeTedo/blog-code/tree/main/spring-boot-jackson)에 저장되어 있습니다.
+> 모든 코드는 [Github](https://github.com/TeTedo/blog-code/tree/main/springboot-propagation-required-new)에 저장되어 있습니다.
 
 > ### 이슈
 >
