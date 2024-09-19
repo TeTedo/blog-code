@@ -36,7 +36,7 @@ Spring에서는 내부적으로 트랜잭션을 관리하는 트랜잭션 매니
 
 따라서 실제 데이터베이스 커넥션이 아니라 Spring 내부에서 나눈 트랜잭션 영역인 것이다.
 
-#### ([[Spring] 스프링의 트랜잭션 전파 속성(Transaction propagation) 완벽하게 이해하기](https://mangkyu.tistory.com/269) 이블로그에 설명이 정말 잘되어있다.)
+![napkin-selection](https://github.com/user-attachments/assets/76dfc9d4-a432-4804-ac52-bfd11fbf0913)
 
 ### REQUIRES_NEW란?
 
@@ -45,6 +45,8 @@ Spring에서는 내부적으로 트랜잭션을 관리하는 트랜잭션 매니
 새로운 물리 트랜잭션을 만들기 때문에 기존 트랜잭션과 별개로 롤백/커밋을 호출할 수 있는것이다.
 
 Spring에서는 Default로 REQUIRED 속성을 사용하는데 이는 기존 트랜잭션이 있다면 참여하고 없다면 새로운 물리 트랜잭션을 만드는 것이다.
+
+![napkin-selection (1)](https://github.com/user-attachments/assets/8c652212-8cc4-4d56-9fa5-a2f18d57c5b4)
 
 ## 2. 요구사항
 
@@ -103,6 +105,8 @@ public class AService {
 
 그래서 다른 서비스를 만들어 테스트를 진행했다.
 
+![napkin-selection (2)](https://github.com/user-attachments/assets/ff97fab1-3d45-4aa6-9c04-580e08d59f1b)
+
 ```java
 public class BService {
 
@@ -135,6 +139,8 @@ public void main2() {
 여기서 문제는 트랜잭션의 범위이다.
 
 select 쿼리가 REQUIRES_NEW로 새로운 물리 트랜잭션 안에서 조회했기때문에 이 안에서만 영속성 컨텍스트가 적용된 것으로 추측한다.
+
+<img width=300 height=300 src="https://github.com/user-attachments/assets/48930b8b-53a1-44da-b9fc-ab4266491528"/>
 
 나는 같은 클래스안에서 REQUIRES_NEW를 사용해서 문제가 됬었고 해결했다. 끝..
 
