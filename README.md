@@ -46,6 +46,8 @@
 
 - [React.memo 최적화](https://github.com/TeTedo/blog-code/tree/main/react-render-optimization/memo)
 
+- [React 모달 어디까지 만들어 봤니?](https://github.com/TeTedo/blog-code/tree/main/react-modal)
+
 # Devops
 
 - [ELK Stack 8.x 서버 구축 (ubuntu 22.04)](https://github.com/TeTedo/blog-code/tree/main/elk-install)
