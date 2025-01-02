@@ -10,4 +10,3 @@ spring:
           uri: https://github.com/TeTedo/blog-code
           search-paths: spring-cloud-config/config-file/**
           default-label: feat/cloud
-
