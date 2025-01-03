@@ -1,5 +1,7 @@
 # Spring Cloud Config
 
+모든 코드는 [깃허브](https://github.com/TeTedo/blog-code/tree/main/springboot-propagation-required-new)에서 볼수 있습니다.
+
 Spring Cloud Config Server는 분산 시스템에서 설정 파일을 중앙에서 관리하고 애플리케이션이 시작될 때 설정을 동적으로 로드할 수 있도록 도와주는 서버입니다. 이를 통해 애플리케이션의 설정을 일관되게 관리하고, 설정 변경 시 애플리케이션을 재배포하지 않고도 설정을 업데이트할 수 있습니다.
 
 ## 주요 기능

@@ -12,6 +12,10 @@
 
 # Spring
 
+### Cloud
+
+- [Spring Cloud Config](https://github.com/TeTedo/blog-code/tree/main/spring-cloud-config)
+
 ### Transaction
 
 - [Propagation.REQUIRES_NEW에서 겪은 이슈](https://github.com/TeTedo/blog-code/tree/main/springboot-propagation-required-new)
