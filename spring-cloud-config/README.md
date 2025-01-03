@@ -9,7 +9,7 @@ Spring Cloud Config Server는 분산 시스템에서 설정 파일을 중앙에�
 - **버전 관리**: Git과 같은 버전 관리 시스템을 통해 설정 파일의 변경 이력을 관리할 수 있습니다.
 - **동적 설정 로드**: 애플리케이션이 실행 중에도 설정을 동적으로 로드할 수 있습니다.
 
-## 설정 방법
+## Config Server
 
 1. **Spring Cloud Config Server 의존성 추가 (Gradle)**:
 
@@ -84,6 +84,8 @@ spring:
 
 3. **Config Server 애플리케이션 설정**:
 
+@EnableConfigServer 어노테이션을 추가한다.
+
 ```java
 @SpringBootApplication
 @EnableConfigServer
@@ -94,20 +96,133 @@ public class ConfigServerApplication {
 }
 ```
 
-4. **설정 파일 경로**:
+4. **설정 파일 경로**
 
-   ```yaml
-   server:
-     port: 8888
+config 파일이 있는 경로에 {어플리케이션이름}-{profile}.yml 형식으로 작성하면
+localhost:8888/{어플리케이션이름}/{profile} 로 접근해서 받을수 있다.
 
-   spring:
-     cloud:
-       config:
-         server:
-           git:
-             uri: https://github.com/your-repo/config-repo
-             clone-on-start: true
-   ```
+(1) sso-dev.yml
+
+http://localhost:8888/sso/dev
+
+```json
+{
+  "name": "sso",
+  "profiles": ["dev"],
+  "label": null,
+  "version": "9fbfd60974f823c23cae9fb3e9297c67a72f4af3",
+  "state": "",
+  "propertySources": [
+    {
+      "name": "https://github.com/TeTedo/blog-code/spring-cloud-config/config-file/sso/dev/sso-dev.yml",
+      "source": {
+        "name": "sso",
+        "profile": "dev"
+      }
+    }
+  ]
+}
+```
+
+## Client
+
+1. **Spring Cloud Config Server 의존성 추가 (Gradle)**:
+
+```groovy
+plugins {
+	id 'java'
+	id 'org.springframework.boot' version '3.4.1'
+	id 'io.spring.dependency-management' version '1.1.7'
+}
+
+group = 'com.example'
+version = '0.0.1-SNAPSHOT'
+
+java {
+	toolchain {
+		languageVersion = JavaLanguageVersion.of(21)
+	}
+}
+
+repositories {
+	mavenCentral()
+}
+
+ext {
+	set('springCloudVersion', "2024.0.0")
+}
+
+dependencies {
+	implementation 'org.springframework.boot:spring-boot-starter-web'
+	implementation 'org.springframework.cloud:spring-cloud-starter-config'
+	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+dependencyManagement {
+	imports {
+		mavenBom "org.springframework.cloud:spring-cloud-dependencies:${springCloudVersion}"
+	}
+}
+
+tasks.named('test') {
+	useJUnitPlatform()
+}
+
+```
+
+2. **Client application.yml 설정**
+
+```yml
+spring:
+  application:
+    name: sso
+  profiles:
+    active: dev
+  config:
+    import: "optional:configserver:"
+
+  cloud:
+    config:
+      uri: http://localhost:8888
+      fail-fast: true # Config Server 연결 실패시 애플리케이션 시작 실패
+```
+
+3. **property 설정**
+
+(1) MyConfig.java
+
+```java
+@Getter
+@Setter
+@RefreshScope
+@ConfigurationProperties(prefix = "")
+@Configuration
+public class MyConfig {
+    private String name;
+    private String profile;
+}
+```
+
+(2) ConfigController
+
+```java
+@RestController
+@RequiredArgsConstructor
+public class ConfigController {
+
+    private final MyConfig myConfig;
+
+    @GetMapping("/config")
+    public String getConfig() {
+        return myConfig.getName() + " " + myConfig.getProfile();
+    }
+}
+```
+
+(3) localhost:8080/config
+
+sso dev 가 잘 출력되는걸 볼수 있다.
 
 ## 참고 자료
 
