@@ -1,0 +1,12 @@
+spring:
+  application:
+    name: sso
+  profiles:
+    active: dev
+  config:
+    import: "optional:configserver:"
+
+  cloud:
+    config:
+      uri: http://localhost:8888
+      fail-fast: true  # Config Server 연결 실패시 애플리케이션 시작 실패

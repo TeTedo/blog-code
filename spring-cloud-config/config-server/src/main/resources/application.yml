@@ -1,0 +1,12 @@
+server:
+  port: 8888
+spring:
+  application:
+    name: config
+  cloud:
+    config:
+      server:
+        git:
+          uri: https://github.com/TeTedo/blog-code
+          search-paths: spring-cloud-config/config-file/**
+          default-label: feat/cloud
