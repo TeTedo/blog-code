@@ -1,0 +1,31 @@
+server:
+  port: 8000
+
+spring:
+  application:
+    name: gateway-service
+
+  cloud:
+    gateway:
+      routes:
+        - id: test1-service
+          uri: lb://test1-service
+          predicates:
+            - Path=/api/*/test1/**
+          filters:
+            - name: CustomAuthFilter
+              args:
+                headerName: X-API-KEY
+                headerValue: your-api-key-value
+        - id: test2-service
+          uri: lb://test2-service
+          predicates:
+            - Path=/api/*/test2/**
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+  instance:
+    instance-id: ${spring.cloud.client.ip-address}:${spring.application.instance_id:${random.value}}
+    prefer-ip-address: true
