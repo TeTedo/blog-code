@@ -37,7 +37,7 @@ Spring Cloud Gateway는 마이크로서비스 아키텍처에서 API Gateway 역
 
 아키텍처 구성 요소
 
-![visual](./img/visualselection.png)
+![visual](https://github.com/user-attachments/assets/5299ac3f-ea61-4968-bfbf-9a8e899f2271)
 **Gateway Service**: 클라이언트의 요청을 수신하고, 적절한 서비스(Test1 Service 또는 Test2 Service)로 요청을 라우팅하는 역할을 합니다. 이 서비스는 API 게이트웨이로서, 클라이언트와 백엔드 서비스 간의 중개 역할을 수행합니다.
 
 **Test1 Service**: 특정 기능을 제공하는 서비스로, 게이트웨이 서비스로부터 요청을 받아 처리합니다.
@@ -357,7 +357,7 @@ public class Test1Controller {
 
 - Eureka Dashboard: http://localhost:8761
 
-![gateway](./img/eureka-example.png)
+![gateway](https://github.com/user-attachments/assets/9507f4ac-2201-4475-a922-8b619620c247)
 
 서버 실행 후 eureka 대시보드에 들어가게 되면 서비스가 등록된것을 확인 할 수 있다.
 
