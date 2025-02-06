@@ -6,6 +6,10 @@
 
 👉[후기 보러 가기](https://github.com/TeTedo/blog-code/tree/main/AroundFlavor)
 
+## [크리스마스 연말 파티]
+
+👉[후기 보러 가기](https://blog.tetedo.com/376)
+
 # CS
 
 - [DNS란 무엇인가?](https://github.com/TeTedo/blog-code/tree/main/cs-dns)
