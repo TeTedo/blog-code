@@ -6,7 +6,7 @@
 
 👉[후기 보러 가기](https://github.com/TeTedo/blog-code/tree/main/AroundFlavor)
 
-## [크리스마스 연말 파티]
+## [[크리스마스 연말 파티]](https://github.com/TeTedo/blog-code/tree/main/party)
 
 👉[후기 보러 가기](https://blog.tetedo.com/376)
 
