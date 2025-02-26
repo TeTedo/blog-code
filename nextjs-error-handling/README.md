@@ -338,6 +338,12 @@ export default function GlobalError({
 
 ![img](https://github.com/user-attachments/assets/2fb79f09-b600-4381-9e7a-cce36fcb0825)
 
+이것저것 찾아보다가 다시 공식문서 정독해보니 한줄을 놓치고 있었다..
+
+![img](https://github.com/user-attachments/assets/d716a8af-9488-4e07-a495-6b2f04b9e667)
+
+개발모드에서는 error overlay가 대신 뜬다는디?? -> 이거 확인하려고 vercel 에 연결해서 배포해봄
+
 ## 참고
 
 - [Next Error Handling 공식문서](https://nextjs.org/docs/app/building-your-application/routing/error-handling#handling-expected-errors-from-server-actions)
