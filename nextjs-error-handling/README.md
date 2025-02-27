@@ -466,7 +466,37 @@ export default function Error({
 
 이벤트 핸들러는 [리액트측에서 설계해놨다고함](https://legacy.reactjs.org/docs/error-boundaries.html#how-about-event-handlers).
 
-다 구현해놓고 안되는것들이 많은 것을 알게되어서 실제로는 error.tsx 정도만 사용하려고 한다.... 그냥 이정도의 아이디어만 생각해봤다 느낌만... 망했네
+한가지 대안점으로 이벤트 핸들러에서 에러가 발생하면 state 값을 갱신해 리렌더링시켜서 에러를 throw 하는 방법이 있다.
+
+```ts
+"use client";
+
+import { useState } from "react";
+import { ProductError, ProductErrorType } from "./layout";
+
+export default function Page() {
+  const [error, setError] = useState<Error | null>(null);
+
+  if (error) {
+    throw error;
+  }
+
+  return (
+    <div
+      onClick={() =>
+        setError(new ProductError(ProductErrorType.PRODUCT_ERROR, "원인이야~"))
+      }
+    >
+      <div>gg</div>
+    </div>
+  );
+}
+```
+
+## 결론
+
+- 클라이언트 + 이벤트핸들러 -> 커스텀에러 처리
+- 서버 -> useActionState 처리
 
 ## 참고
 

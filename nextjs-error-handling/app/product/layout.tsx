@@ -5,11 +5,20 @@ export enum ProductErrorType {
   PRODUCT_ERROR = "PRODUCT_ERROR",
 }
 
+const ProductErrorMessages: Record<ProductErrorType, string> = {
+  [ProductErrorType.VALIDATION_ERROR]: "유효성 검사 오류가 발생했습니다",
+  [ProductErrorType.NOT_FOUND_ERROR]: "요청한 리소스를 찾을 수 없습니다",
+  [ProductErrorType.SERVER_ERROR]: "서버 오류가 발생했습니다",
+  [ProductErrorType.PRODUCT_ERROR]: "프로덕트 에러가 발생했습니다",
+};
+
 export class ProductError extends Error {
-  readonly errorId = "ProductError"; // 식별자 추가
+  type: ProductErrorType;
+  cause: string;
 
   constructor(type: ProductErrorType, cause: string) {
-    super(type);
+    super(ProductErrorMessages[type]);
+    this.type = type;
     this.cause = cause;
   }
 }
