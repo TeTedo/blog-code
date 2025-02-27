@@ -346,7 +346,7 @@ export default function GlobalError({
 
 개발모드에서는 error overlay가 대신 뜬다는디?? -> 이거 확인하려고 vercel 에 연결해서 배포해봄
 
-아 그냥 로컬에서 빌드하고 실행시켰으면 됬었네..
+아 그냥 로컬에서 빌드하고 실행시켰으면 됐었네..
 
 page에서 그냥 throw error 를 하면 빌드가 안되서 다른 방식으로 처리했다.
 
