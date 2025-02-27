@@ -58,6 +58,10 @@
 
 - [React 모달 어디까지 만들어 봤니?](https://github.com/TeTedo/blog-code/tree/main/react-modal)
 
+### Nextjs
+
+- [Nextjs15 에러핸들링](https://github.com/TeTedo/blog-code/tree/main/nextjs-error-handling)
+
 # Devops
 
 - [ELK Stack 8.x 서버 구축 (ubuntu 22.04)](https://github.com/TeTedo/blog-code/tree/main/elk-install)

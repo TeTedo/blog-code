@@ -1,5 +1,7 @@
 # Nextjs15 에러핸들링
 
+모든 코드는 [github](https://github.com/TeTedo/blog-code/tree/main/nextjs-error-handling)에 있습니다.
+
 ## 서론
 
 에러 핸들링은 따지자면 **에러** 핸들링과 **예외** 핸들링이 존재한다고 한다.
@@ -343,6 +345,128 @@ export default function GlobalError({
 ![img](https://github.com/user-attachments/assets/d716a8af-9488-4e07-a495-6b2f04b9e667)
 
 개발모드에서는 error overlay가 대신 뜬다는디?? -> 이거 확인하려고 vercel 에 연결해서 배포해봄
+
+아 그냥 로컬에서 빌드하고 실행시켰으면 됬었네..
+
+page에서 그냥 throw error 를 하면 빌드가 안되서 다른 방식으로 처리했다.
+
+- app/product/[id]/page.tsx
+
+```ts
+import { ProductError } from "../product-error";
+
+export default async function Page({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+
+  if (id === "error") {
+    throw new ProductError("에러 발생", "ProductError", "ProductError Cause");
+  }
+
+  return <h1>Product: {id}</h1>;
+}
+```
+
+http://localhost:3000/product/error 접속 결과 global-error.tsx 에서 잘 잡는다.
+
+추가로 global-error.tsx는 루트에 있는 layout의 에러도 잡는다고 한다.
+
+### 4. 커스텀 에러 정리
+
+- app/product/layout.tsx
+
+```ts
+export enum ProductErrorType {
+  VALIDATION_ERROR = "VALIDATION_ERROR",
+  NOT_FOUND_ERROR = "NOT_FOUND_ERROR",
+  SERVER_ERROR = "SERVER_ERROR",
+  PRODUCT_ERROR = "PRODUCT_ERROR",
+}
+
+const ProductErrorMessages: Record<ProductErrorType, string> = {
+  [ProductErrorType.VALIDATION_ERROR]: "유효성 검사 오류가 발생했습니다",
+  [ProductErrorType.NOT_FOUND_ERROR]: "요청한 리소스를 찾을 수 없습니다",
+  [ProductErrorType.SERVER_ERROR]: "서버 오류가 발생했습니다",
+  [ProductErrorType.PRODUCT_ERROR]: "프로덕트 에러가 발생했습니다",
+};
+
+export class ProductError extends Error {
+  type: ProductErrorType;
+  cause: string;
+
+  constructor(type: ProductErrorType, cause: string) {
+    super(ProductErrorMessages[type]);
+    this.type = type;
+    this.cause = cause;
+  }
+}
+
+export default function Layout({ children }: { children: React.ReactNode }) {
+  return <div>{children}</div>;
+}
+```
+
+- app/product/page.tsx
+
+```ts
+"use client";
+
+import { ProductError, ProductErrorType } from "./layout";
+
+export default function Page() {
+  throw new ProductError(ProductErrorType.PRODUCT_ERROR, "원인이야~");
+}
+```
+
+- app/product/error.tsx
+
+```ts
+"use client"; // Error boundaries must be Client Components
+
+import { ProductError, ProductErrorType } from "./layout";
+
+export default function Error({
+  error,
+  reset,
+}: {
+  error: ProductError & { digest?: string };
+  reset: () => void;
+}) {
+  if (!(error instanceof ProductError)) {
+    throw error;
+  }
+  return (
+    <>
+      {error.type === ProductErrorType.PRODUCT_ERROR && (
+        <div>
+          <h2>다른에러는 안보임</h2>
+          <button
+            onClick={
+              // Attempt to recover by trying to re-render the segment
+              () => reset()
+            }
+          >
+            Try again
+          </button>
+        </div>
+      )}
+    </>
+  );
+}
+```
+
+이런식으로 내가 커스텀에러를 만들어서 throw 하면 error.tsx 에서 에러별로 화면을 지정해줄수 있다.
+
+한가지 이슈는 서버측 에러, 이벤트 핸들러 안에서의 에러는 이런식으로 잡지 못한다.
+
+서버에서 클라이언트로 직렬화 하는데 이슈가 있다고 한다.
+
+이벤트 핸들러는 [리액트측에서 설계해놨다고함](https://legacy.reactjs.org/docs/error-boundaries.html#how-about-event-handlers).
+
+다 구현해놓고 안되는것들이 많은 것을 알게되어서 실제로는 error.tsx 정도만 사용하려고 한다.... 그냥 이정도의 아이디어만 생각해봤다 느낌만... 망했네
 
 ## 참고
 
