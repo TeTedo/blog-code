@@ -63,3 +63,4 @@ out/
 *.pem
 *.env
 package-lock.json
+node_modules/
