@@ -9,6 +9,7 @@
     "asymmetric": "node asymmetric-encryption.js",
     "signature": "node digital-signature.js",
     "hybrid": "node hybrid-encryption.js",
+    "performance": "node performance-test.js",
     "gcm-auth-tag-demo": "node gcm-auth-tag-demo.js"
   },
   "keywords": [

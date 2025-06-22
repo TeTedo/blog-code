@@ -99,6 +99,12 @@ try {
 }
 ```
 
+```
+정상 인증 태그: d7cc8b897b49ab508f04f68d2b5b4280
+암호문: bc32ce9f35
+GCM 인증 태그 검증 실패! 예외 발생: Unsupported state or unable to authenticate data
+```
+
 #### 결론
 
 - **새로운 서비스/시스템에서는 반드시 GCM을 사용하세요!**
@@ -265,6 +271,30 @@ if (require.main === module) {
 module.exports = SymmetricEncryptionExample;
 ```
 
+```
+=== 대칭키 암호화 예제 (GCM 모드) ===
+평문: 안녕하세요! 이것은 대칭키 암호화 테스트입니다.
+키 길이: 256 비트
+GCM 암호화된 데이터: {
+  nonce: '6b16072c298ed06a270753ec',
+  encrypted: '59f33d8f1982f7eb007542ebd384f1c6f78449e0b5ee8299b81660be73d3df3217ac831c18d21e9d1974e40af41b383932c5f6a3a621d4ab8826866524758bbfe779',
+  authTag: '3368c687d2d67af84642a3a73c9acc7c'
+}
+GCM 복호화된 텍스트: 안녕하세요! 이것은 대칭키 암호화 테스트입니다.
+GCM 암호화/복호화 성공: true
+
+=== GCM 인증 태그 변조 시도 (실패 예시) ===
+GCM 인증 태그 검증 실패! 예외 발생: Unsupported state or unable to authenticate data
+
+=== Nonce의 중요성 시연 ===
+같은 평문을 3번 암호화한 결과:
+1번째 암호문: 676b8b61444d3600d487b31090ff33d6...
+2번째 암호문: 673d3c4491058d160668a6adbeed2925...
+3번째 암호문: 44221e6046a6396dea0399750e473aed...
+모든 암호문이 다른가? true
+모든 복호화가 성공했는가? true
+```
+
 ## 비대칭키 암호화 (Asymmetric Key Encryption)
 
 ### 개념
@@ -362,6 +392,23 @@ if (require.main === module) {
 }
 ```
 
+```
+=== 비대칭키 암호화 예제 ===
+평문: 안녕하세요! 이것은 비대칭키 암호화 테스트입니다.
+공개키 길이: 451 바이트
+개인키 길이: 1704 바이트
+암호화된 텍스트: QaFRMjMpl8JiQd6lwXaACM8a6WGJWX0NiDBIBLYG7bdr0fTDpTDMxbwNQ4m/q2BaLvAPLn9p/X0IsuJq0qs5nGT6XAPZC32RPkdCi+7+QWXZqU0AqpGvolPnLh8RrPcV5mz1IK3f3hlMDsDydmQVD6s9eUWAmta/L+EaRymvGtI2RSe6OBm10Rl3ZbbKgofSvsqkIszU+wYVqpkhOIeSiYmN1eMLbprgfCbwyy614s3WXdwiGxckKroAR8up0Ct7lWZr+iCOvzmmeXojy0ctXdatDDY4y20uehmsREpUyRrY010Zkl0rUOIFrY+VFtGeXszJSDI8fHvqLVxzLTA7ug==
+복호화된 텍스트: 안녕하세요! 이것은 비대칭키 암호화 테스트입니다.
+암호화/복호화 성공: true
+
+=== RSA 제한사항 시연 ===
+짧은 텍스트 길이: 6 바이트
+긴 텍스트 길이: 300 바이트
+짧은 텍스트 암호화/복호화: 성공
+긴 텍스트 암호화 실패: error:0200006E:rsa routines::data too large for key size
+→ 이것이 하이브리드 암호화가 필요한 이유입니다!
+```
+
 ## 실제 사용 사례
 
 ### 디지털 서명
@@ -427,6 +474,24 @@ class DigitalSignatureExample {
 if (require.main === module) {
   DigitalSignatureExample.main();
 }
+```
+
+```
+=== 디지털 서명 예제 ===
+원본 메시지: 이 문서는 디지털 서명이 적용되었습니다.
+서명: m6I9Ry96Pa43Ex1x+1JlieX88FJxMl+M71Dm295o0KTNocR12X0NfXdznnRDLK6OkRhL+QvanwWUeI7Ln8Taq+rF7g+ZtBU6r9IUWUDcfVkKa1KEwhjtejBYJpw3KBZC3KLPyCce5YWyCnyLOUjH75zsCF0KSviJuGI2Xy1ew5d/0cyW3hsZXq3rJ0DljXLGxMD96rN9j+t4T0hJX5h44bz5L/McYM/nLMggEcyIdneUUy5q+gFGbgOx1cWJiYEp2o0Bp5aF9EbNSMwPcVmEtcDV+jfe37Q67BEd/7Xy+IxYGorZNujeZOp/l975ybKUYcT307fq8DV2oiogNqVxyw==
+서명 검증 결과: true
+수정된 메시지 검증 결과: false
+
+=== 타임스탬프가 포함된 서명 예제 ===
+타임스탬프 서명 결과: {
+  message: '이 문서는 타임스탬프가 포함된 디지털 서명이 적용되었습니다.',
+  timestamp: 1750574454025,
+  signature: 'ofWo1g81GL56XGemgKH9f6vBz2J4Up7umOKcqAlp8I21+ZAz57VMXGN9Gi4ixhzLiahfv5vbx7jKXackz5hsDNOV2dmkReexrjfO3RPR+NqHC0FI7OTZ1qDNaXiWdf2lDScVOuB/FVRiiL/TFCnVQMHkx04NuA/jSxRziyTY+mpI6ir71Bcu8kkBQvSzibfJFh70+sOreeoYU/Rhj24nFYS+vZVtGg+QdMY9yijAcdowhdX8d7yZmVmbhtfUr8pqwcCzLV9k2/MZ+709Ul0tzAInW6MmWiy4r4GJF11cIT9VJ/oZsBMWYDgar0n9n110jig6fRusciDD8pQq40w7xA=='
+}
+타임스탬프 서명 검증 결과: true
+서명이 만료되었습니다. (경과 시간: 600001 ms)
+만료된 서명 검증 결과: false
 ```
 
 ## 하이브리드 방식
@@ -655,6 +720,31 @@ if (require.main === module) {
 }
 
 module.exports = HybridEncryptionExample;
+```
+
+```
+=== 하이브리드 암호화 예제 ===
+원본 데이터 길이: 147 바이트
+공개키 길이: 451 바이트
+개인키 길이: 1704 바이트
+
+하이브리드 암호화 결과:
+- 암호화된 데이터 길이: 754 바이트
+- 암호화된 키 길이: 344 바이트
+- Nonce: 402fd9c1d6a266f6044b7eed
+
+하이브리드 복호화 결과: 이것은 대용량 데이터를 시뮬레이션하기 위한 긴 텍스트입니다. 실제로는 파일이나 데이터베이스의 대용량 데이터를 암호화할 때 비대칭키만 사용하면 매우 느리기 때문에 하이브리드 방식을 사용합니다. 대칭키로 데이터를 암호화하고, 비대칭키로 대칭키를 암호화하는 방식입니다.
+하이브리드 암호화/복호화 성공: true
+
+=== 성능 비교: 순수 RSA vs 하이브리드 ===
+순수 RSA 실패 (데이터가 너무 큼): error:0200006E:rsa routines::data too large for key size
+하이브리드 (147바이트): 1ms
+하이브리드가 훨씬 빠르고 대용량 데이터도 처리 가능!
+
+=== 파일 암호화 시뮬레이션 ===
+파일 크기: 1048576 바이트 (1MB)
+1MB 파일 암호화/복호화 시간: 5ms
+파일 무결성 검증: 성공
 ```
 
 ## 실제 사용 사례
