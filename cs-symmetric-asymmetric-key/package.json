@@ -1,0 +1,25 @@
+{
+  "name": "cs-symmetric-asymmetric-key",
+  "version": "1.0.0",
+  "description": "대칭키 vs 비대칭키 암호화 예제",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "symmetric": "node symmetric-encryption.js",
+    "asymmetric": "node asymmetric-encryption.js",
+    "signature": "node digital-signature.js",
+    "hybrid": "node hybrid-encryption.js",
+    "gcm-auth-tag-demo": "node gcm-auth-tag-demo.js"
+  },
+  "keywords": [
+    "암호화",
+    "대칭키",
+    "비대칭키",
+    "crypto"
+  ],
+  "author": "TeTedo",
+  "license": "MIT",
+  "dependencies": {
+    "crypto": "^1.0.1"
+  }
+}
