@@ -1,0 +1,34 @@
+{
+  "name": "zk-zero-knowledge-proof-example",
+  "version": "1.0.0",
+  "description": "Zero-Knowledge Proof 예제 및 구현",
+  "main": "age-proof-example.js",
+  "scripts": {
+    "start": "node age-proof-example.js",
+    "test": "node age-proof-example.js",
+    "dev": "node --watch age-proof-example.js",
+    "age": "node age-proof-system.js",
+    "transaction": "node private-transaction-system.js",
+    "all": "npm run age && echo '' && npm run transaction"
+  },
+  "keywords": [
+    "zero-knowledge-proof",
+    "zk",
+    "cryptography",
+    "privacy",
+    "blockchain",
+    "age-verification",
+    "private-transaction"
+  ],
+  "author": "TeTedo",
+  "license": "MIT",
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "dependencies": {},
+  "devDependencies": {},
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/TeTedo/blog-code/tree/main/zk-zero-knowledge-proof"
+  }
+}
