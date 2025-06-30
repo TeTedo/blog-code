@@ -43,7 +43,7 @@ noirup --version nightly
 
 예제로 있는 프로젝트는 나이를 증명하는 프로젝트다.
 
-예를 들면 20세이상만 들어갈수 있는 술집에 내 실제나이는 밝히지 않고 20세 이상인지만 증명하는 것이다.
+예를 들면 20세이상만 들어갈수 있는 술집에 내 실제나이는 밝히지 않고 20세 이상인지만 증명하는 것이다. 라고 설명에 되어있음
 
 root 프로젝트 생성후
 
@@ -149,11 +149,143 @@ index.html
 </html>
 ```
 
-아래는 공식문서에 있는 얘기 -
+<img src="./public/beautiful-lol.png">
+
+아래는 공식문서에 있는 얘기 - 어느세계에서 봐야 아름다울수 있는걸까.. 귀찮다는 얘기를 잘도 써놨군.
+
+거의 몇년만에 이놈 덕분에 vscode live server 를 쓰는군 추억의 html
 
 ```
 It could be a beautiful UI... Depending on which universe you live in.
 ```
+
+index.js
+
+```js
+const show = (id, content) => {
+  const container = document.getElementById(id);
+  container.appendChild(document.createTextNode(content));
+  container.appendChild(document.createElement("br"));
+};
+
+document.getElementById("submit").addEventListener("click", async () => {
+  try {
+    // noir goes here
+  } catch {
+    show("logs", "Oh 💔");
+  }
+});
+```
+
+그래서 뭐 어쩌라고.. 이걸로 뭐하라고.. 는 뒤에 또 코드 추가할게 있네 - 한번에 줘라 팍-시
+
+```js
+import { UltraHonkBackend } from "@aztec/bb.js";
+import { Noir } from "@noir-lang/noir_js";
+import circuit from "./circuit/target/circuit.json";
+```
+
+console 에서 404 뜨는거 실화냐
+
+```bash
+GET http://127.0.0.1:5500/index.js net::ERR_ABORTED 404 (Not Found)
+```
+
+일단 해보자..
+
+다음은 울트라 백엔드 추가 - 기존에 있던 try 문 안에 넣으라는듯
+
+```js
+try {
+const noir = new Noir(circuit);
+const backend = new UltraHonkBackend(circuit.bytecode);
+}
+```
+
+요놈도 추가
+
+```js
+const age = document.getElementById("age").value;
+show("logs", "Generating witness... ⏳");
+const { witness } = await noir.execute({ age });
+show("logs", "Generated witness... ✅");
+
+show("logs", "Generating proof... ⏳");
+const proof = await backend.generateProof(witness);
+show("logs", "Generated proof... ✅");
+show("results", proof.proof);
+```
+
+vite config 추가
+
+```bash
+touch vite.config.js
+```
+
+```js
+export default {
+  optimizeDeps: {
+    esbuildOptions: { target: "esnext" },
+    exclude: ["@noir-lang/noirc_abi", "@noir-lang/acvm_js"],
+  },
+};
+```
+
+드디어 실행
+
+```js
+yarn dlx vite
+```
+
+```
+yarn run v1.22.22
+warning package.json: No license field
+error Command "dlx" not found.
+info Visit https://yarnpkg.com/en/docs/cli/run for documentation about this command.
+```
+
+yarn version 이 낮네.. 귀찮아서 npx vite 로 실행
+
+```bash
+npx vite
+```
+
+얘네들도 ui가 부끄러웠나봄
+
+```
+You should now see the worst UI ever, with an ugly input.
+```
+
+코드하나 더 넣고 input 에 암거나 넣어보자
+
+```js
+show("logs", "Verifying proof... ⌛");
+const isValid = await backend.verifyProof(proof);
+show("logs", `Proof is ${isValid ? "valid" : "invalid"}... ✅`);
+```
+
+성공 결과
+
+<img src="./public/success.png">
+
+실패 결과
+
+<img src="./public/fail.png">
+
+## 3. 그래서 저기 Proof 쪽에 뜨는건 뭐임
+
+일단 실패하면 어떤 메시지가 뜨는지 궁금해서 catch 문에서 error 출력해봤다.
+
+```js
+catch (e) {
+  show("logs", e);
+  show("logs", "Oh 💔");
+}
+```
+
+<img src="./public/fail-message.png">
+
+내일더 알아봐야지..
 
 ## 레퍼런스
 
