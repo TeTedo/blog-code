@@ -1,5 +1,7 @@
 # ZK - Noir 시작해보기
 
+모든 코드는 [깃허브](https://github.com/TeTedo/blog-code/tree/main/zk-start-noir)에서 볼수 있습니다.
+
 ## 서론
 
 영지식 증명 교육 프로그램을 듣게 되었는데 cairo, noir, halo2 중에 하나를 선택해 예시 코드를 짜보라는 과제를 받았다.
