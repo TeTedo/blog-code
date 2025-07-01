@@ -19,6 +19,8 @@
 
 - [ZK(Zero-Knowledge Proof)란 무엇인가?](https://github.com/TeTedo/blog-code/tree/main/zk-zero-knowledge-proof)
 
+- [ZK - Noir 시작해보기](https://github.com/TeTedo/blog-code/tree/main/zk-start-noir)
+
 # Spring
 
 ### Cloud
