@@ -285,7 +285,31 @@ catch (e) {
 
 <img src="./public/fail-message.png">
 
-내일더 알아봐야지..
+먼저 noir 에서 witness(증인)를 생성한다
+
+```js
+const { witness } = await noir.execute({ age });
+```
+
+이 과정은 사용자의 입력을 받아 나이가 20살이 넘는다 라는걸 증명해주는 증인이라고 이해했다.
+
+그다음 이 증인을 데려가서 proof 라는 증명을 만든다.
+
+witness(증인)은 내 나이를 입력받아 만들어진것으로 내 나이를 안다.
+
+그래서 내 나이를 숨기기위해 proof를 만든다고 이해했다.
+
+```js
+const proof = await backend.generateProof(witness);
+```
+
+이 증명을 가지고 다니면서 내가 20살이 넘는다 라는걸 입증할수 있다.
+
+```js
+const isValid = await backend.verifyProof(proof);
+```
+
+결론적으로 Proof 쪽에 뜨는건 내 proof 의 바이트코드이다.
 
 ## 레퍼런스
 

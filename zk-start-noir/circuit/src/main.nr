@@ -1,3 +1,3 @@
 fn main(age: u8) {
-  assert(age >= 18);
+  assert(age >= 20);
 }
