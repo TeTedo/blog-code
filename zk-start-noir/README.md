@@ -151,7 +151,7 @@ index.html
 </html>
 ```
 
-<img src="./public/beautiful-lol.png">
+![Image](https://github.com/user-attachments/assets/9148f991-1de7-4de2-8a81-0763d82721dd)
 
 아래는 공식문서에 있는 얘기 - 어느세계에서 봐야 아름다울수 있는걸까.. 귀찮다는 얘기를 잘도 써놨군.
 
@@ -268,11 +268,11 @@ show("logs", `Proof is ${isValid ? "valid" : "invalid"}... ✅`);
 
 성공 결과
 
-<img src="./public/success.png">
+![Image](https://github.com/user-attachments/assets/a3d90e7b-47d7-401a-b62e-95514c0180e9)
 
 실패 결과
 
-<img src="./public/fail.png">
+![Image](https://github.com/user-attachments/assets/cca2110d-1aeb-473c-b80b-41ca5dab105d)
 
 ## 3. 그래서 저기 Proof 쪽에 뜨는건 뭐임
 
@@ -285,7 +285,7 @@ catch (e) {
 }
 ```
 
-<img src="./public/fail-message.png">
+![Image](https://github.com/user-attachments/assets/dbfb246b-bc76-4c6f-aac8-baf056808130)
 
 먼저 noir 에서 witness(증인)를 생성한다
 
