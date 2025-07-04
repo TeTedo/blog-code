@@ -23,6 +23,8 @@
 
 - [ZK - Cario 시작해보기](https://github.com/TeTedo/blog-code/tree/main/zk-start-cairo)
 
+- [ZK - Cairo 소수 검증](https://github.com/TeTedo/blog-code/tree/main/zk-cairo-prime-number)
+
 # Spring
 
 ### Cloud

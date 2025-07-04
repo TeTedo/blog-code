@@ -2,7 +2,7 @@
 
 [ZK- Cairo 시작해보기](https://github.com/TeTedo/blog-code/tree/main/zk-start-cairo)에 이어 2번째 cairo tutorial 이다.
 
-모든 코드는 [깃허브](https://github.com/TeTedo/blog-code/tree/main/zk-start-cairo)에서 볼수 있습니다.
+모든 코드는 [깃허브](https://github.com/TeTedo/blog-code/tree/main/zk-cairo-prime-number)에서 볼수 있습니다.
 
 ## 1. 세팅
 
