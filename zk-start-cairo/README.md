@@ -124,9 +124,11 @@ function = "hello_world::hello_world::main"
 
 src/lib.cairo
 
-```cairo
+```rust
 mod hello_world;
 ```
+
+파일 생성
 
 ```
 touch ./src/hello_world.cairo
@@ -134,7 +136,7 @@ touch ./src/hello_world.cairo
 
 src/hello_world.cairo
 
-```cairo
+```rust
 #[executable]
 fn main() {
     println!("Hello, World!");
