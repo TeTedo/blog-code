@@ -1,5 +1,5 @@
 [package]
-name = "contract"
+name = "verfier"
 version = "0.1.0"
 edition = "2024_07"
 
@@ -9,7 +9,7 @@ edition = "2024_07"
 starknet = "2.11.4"
 
 [dev-dependencies]
-snforge_std = "0.43.1"
+snforge_std = "0.45.0"
 assert_macros = "2.11.4"
 
 [[target.starknet-contract]]

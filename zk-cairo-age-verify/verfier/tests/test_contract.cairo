@@ -2,10 +2,10 @@ use starknet::ContractAddress;
 
 use snforge_std::{declare, ContractClassTrait, DeclareResultTrait};
 
-use circuit::IHelloStarknetSafeDispatcher;
-use circuit::IHelloStarknetSafeDispatcherTrait;
-use circuit::IHelloStarknetDispatcher;
-use circuit::IHelloStarknetDispatcherTrait;
+use verfier::IHelloStarknetSafeDispatcher;
+use verfier::IHelloStarknetSafeDispatcherTrait;
+use verfier::IHelloStarknetDispatcher;
+use verfier::IHelloStarknetDispatcherTrait;
 
 fn deploy_contract(name: ByteArray) -> ContractAddress {
     let contract = declare(name).unwrap().contract_class();
