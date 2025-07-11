@@ -1,2 +1,2 @@
-age = 25
-min_age = 20
+age = "25"
+min_age = "20"

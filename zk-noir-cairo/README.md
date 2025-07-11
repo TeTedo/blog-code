@@ -153,8 +153,25 @@ bb prove -s ultra_honk --oracle_hash keccak --zk -b target/circuit.json -w targe
 cli 검증
 
 ```bash
-garaga calldata --system ultra_starknet_zk_honk --proof ./target/proof --vk ./target/vk
+garaga calldata --system ultra_starknet_zk_honk --proof target/proof --vk target/vk --public-inputs target/public_inputs
 ```
+
+result
+
+```
+겁나 긴 proof 생성됨
+```
+
+contract 검증
+
+```bash
+sncast --profile=devnet call \
+    --contract-address=0x053fc43c05a73d8a85b4062e46036af1971ecc22495cc36d9ebdf656950e871d \
+    --function=verify_ultra_starknet_zk_honk_proof \
+    --arguments
+```
+
+이 명령어는 스마트 컨트랙트에서 사용할 수 있는 calldata를 생성합니다. 이 calldata를 사용해서 배포된 verifier 컨트랙트에서 proof를 검증할 수 있습니다.
 
 ## 레퍼런스
 
