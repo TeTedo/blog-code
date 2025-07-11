@@ -30,6 +30,8 @@
 
 - [ZK - STARK SEPOLIA에 배포해보기](https://github.com/TeTedo/blog-code/tree/main/zk-starknet-deploy)
 
+- [ZK [Cairo] - 나이 인증 회로 구현](https://github.com/TeTedo/blog-code/tree/main/zk-cairo-age-verify)
+
 # Spring
 
 ### Cloud
