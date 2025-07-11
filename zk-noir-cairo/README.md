@@ -86,6 +86,76 @@ garaga gen --system ultra_starknet_zk_honk --vk target/vk
 
 프로젝트 이름을 넣으면 cairo로 된 코드가 자동 생성된다.
 
+## (3) verifier 배포
+
+### Local 배포
+
+```bash
+starknet-devnet --seed=0
+```
+
+declare
+
+```bash
+sncast --profile=devnet declare \
+    --contract-name=UltraStarknetZKHonkVerifier
+```
+
+result
+
+```bash
+command: declare
+class_hash: 0x07b418d30adb241ab4c59707c90848dbbe6fe0f806462e32b741a4e67a83c974
+transaction_hash: 0x05a1ae51ee9bbff041f9206932fdf0e6ba04af8b48e0c3a557069b74b911cb12
+```
+
+deploy
+
+```bash
+sncast --profile=devnet deploy \
+    --class-hash=0x07b418d30adb241ab4c59707c90848dbbe6fe0f806462e32b741a4e67a83c974 \
+    --salt=0
+```
+
+result
+
+```bash
+command: deploy
+contract_address: 0x053fc43c05a73d8a85b4062e46036af1971ecc22495cc36d9ebdf656950e871d
+transaction_hash: 0x024da665245cbc820d239e20ad2078ad458eede2ee556165690218247100bb96
+```
+
+## (4) proof 만들기
+
+circuit 폴더로 돌아가서 Prover.toml 파일을 만들어서 witness 를 만들고 witness로 proof를 만들어줄것이다.
+
+Prover.toml
+
+```toml
+age = 25
+min_age = 20
+```
+
+witness 생성
+
+```bash
+nargo execute witness
+```
+
+proof 생성
+
+```bash
+bb prove -s ultra_honk --oracle_hash keccak --zk -b target/circuit.json -w target/witness.gz -o target/
+```
+
+## (5) proof 검증
+
+cli 검증
+
+```bash
+garaga calldata --system ultra_starknet_zk_honk --proof ./target/proof --vk ./target/vk
+```
+
 ## 레퍼런스
 
 - [Noir Verifier](https://garaga.gitbook.io/garaga/smart-contract-generators/noir)
