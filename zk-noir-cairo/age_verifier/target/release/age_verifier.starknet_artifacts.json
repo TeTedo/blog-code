@@ -1,1 +1,0 @@
-{"version":1,"contracts":[{"id":"9o0cr7e1orfiq","package_name":"age_verifier","contract_name":"UltraStarknetZKHonkVerifier","module_path":"age_verifier::honk_verifier::UltraStarknetZKHonkVerifier","artifacts":{"sierra":"age_verifier_UltraStarknetZKHonkVerifier.contract_class.json","casm":"age_verifier_UltraStarknetZKHonkVerifier.compiled_contract_class.json"}}]}
