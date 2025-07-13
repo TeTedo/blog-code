@@ -18,7 +18,7 @@
 
 - [DB - mysql btree](https://github.com/TeTedo/blog-code/tree/main/db-mysql-binary-tree)
 
-- [DB - MySQL 인덱스 완전 가이드](https://github.com/TeTedo/blog-code/tree/main/db-mysql-index)
+- [DB - MySQL 인덱스 사용 가이드](https://github.com/TeTedo/blog-code/tree/main/db-mysql-index)
 
 # BlockChain
 
