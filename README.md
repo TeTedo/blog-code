@@ -34,6 +34,8 @@
 
 - [ZK [Cairo] - 나이 인증 회로 구현](https://github.com/TeTedo/blog-code/tree/main/zk-cairo-age-verify)
 
+- [ZK 나이 인증 회로 구현 업그레이드](https://github.com/TeTedo/blog-code/tree/main/zk-noir-cairo)
+
 # Spring
 
 ### Cloud
