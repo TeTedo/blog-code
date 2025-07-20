@@ -16,6 +16,8 @@
 
 - [대칭키 vs 비대칭키 암호화](https://github.com/TeTedo/blog-code/tree/main/cs-symmetric-asymmetric-key)
 
+- [TCP vs UDP의 차이점과 사용 사례](https://github.com/TeTedo/blog-code/tree/main/cs-tcp-udp)
+
 - [DB - mysql btree](https://github.com/TeTedo/blog-code/tree/main/db-mysql-binary-tree)
 
 - [DB - MySQL 인덱스 사용 가이드](https://github.com/TeTedo/blog-code/tree/main/db-mysql-index)
