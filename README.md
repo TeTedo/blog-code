@@ -38,6 +38,8 @@
 
 - [ZK - noir, cairo 섞어쓰기](https://github.com/TeTedo/blog-code/tree/main/zk-noir-cairo)
 
+- [ZK 교육 후기](https://github.com/TeTedo/blog-code/tree/main/zk-study)
+
 # BlockChain
 
 - [kaiascan은 token transfer 를 어떻게 처리할까](https://github.com/TeTedo/blog-code/tree/main/kaia-token-transfer)
