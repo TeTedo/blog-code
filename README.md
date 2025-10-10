@@ -44,6 +44,8 @@
 
 - [kaiascan은 token transfer 를 어떻게 처리할까](https://github.com/TeTedo/blog-code/tree/main/kaia-token-transfer)
 
+- [PNKSTR 토큰 분석](https://github.com/TeTedo/blog-code/tree/main/contract-PNKSTR)
+
 # Spring
 
 ### Cloud

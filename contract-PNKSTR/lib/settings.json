@@ -1,0 +1,62 @@
+{
+	"remappings": [
+		"solady/=lib/solady/src/",
+		"@uniswap/v4-core/=lib/v4-core/",
+		"@uniswap/v4-periphery/=lib/v4-periphery/",
+		"@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/",
+		"v4-router/=lib/v4-router/src/",
+		"@v4/=lib/v4-core/",
+		"@ensdomains/=lib/v4-core/node_modules/@ensdomains/",
+		"@forge/=lib/v4-router/lib/forge-std/src/",
+		"@openzeppelin/uniswap-hooks/=lib/v4-router/lib/v4-template/lib/uniswap-hooks/",
+		"@permit2/=lib/v4-router/lib/permit2/src/",
+		"@solady/=lib/v4-router/lib/solady/",
+		"@uniswap/v2-core/=lib/v4-router/lib/universal-router/node_modules/@uniswap/v2-core/",
+		"@uniswap/v3-core/=lib/v4-router/lib/universal-router/node_modules/@uniswap/v3-core/",
+		"@uniswap/v3-periphery/=lib/v4-router/lib/universal-router/lib/v3-periphery/",
+		"@universal-router/=lib/v4-router/lib/universal-router/contracts/",
+		"@v4-periphery/=lib/v4-router/lib/v4-periphery/",
+		"@v4-template/=lib/v4-router/lib/v4-template/",
+		"ds-test/=lib/v4-core/lib/forge-std/lib/ds-test/src/",
+		"erc4626-tests/=lib/openzeppelin-contracts/lib/erc4626-tests/",
+		"forge-gas-snapshot/=lib/v4-router/lib/forge-gas-snapshot/src/",
+		"forge-std/=lib/forge-std/src/",
+		"halmos-cheatcodes/=lib/openzeppelin-contracts/lib/halmos-cheatcodes/src/",
+		"hardhat/=lib/v4-core/node_modules/hardhat/",
+		"hookmate/=lib/v4-router/lib/v4-template/lib/hookmate/src/",
+		"openzeppelin-contracts/=lib/openzeppelin-contracts/",
+		"openzeppelin/=lib/v4-router/lib/v4-template/lib/uniswap-hooks/lib/v4-core/lib/openzeppelin-contracts/contracts/",
+		"permit2/=lib/v4-periphery/lib/permit2/",
+		"solmate/=lib/v4-core/lib/solmate/",
+		"uniswap-hooks/=lib/v4-router/lib/v4-template/lib/uniswap-hooks/src/",
+		"universal-router/=lib/v4-router/lib/universal-router/",
+		"v3-periphery/=lib/v4-router/lib/universal-router/lib/v3-periphery/contracts/",
+		"v4-core/=lib/v4-core/src/",
+		"v4-periphery/=lib/v4-periphery/",
+		"v4-template/=lib/v4-router/lib/v4-template/",
+		"lib/permit2/test:openzeppelin-contracts/contracts/=lib/v4-router/lib/permit2/lib/openzeppelin-contracts/contracts/"
+	],
+	"optimizer": {
+		"enabled": false,
+		"runs": 200
+	},
+	"metadata": {
+		"useLiteralContent": false,
+		"bytecodeHash": "ipfs",
+		"appendCBOR": true
+	},
+	"outputSelection": {
+		"*": {
+			"*": [
+				"evm.bytecode",
+				"evm.deployedBytecode",
+				"devdoc",
+				"userdoc",
+				"metadata",
+				"abi"
+			]
+		}
+	},
+	"evmVersion": "cancun",
+	"viaIR": false
+}
