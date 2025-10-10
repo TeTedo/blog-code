@@ -130,7 +130,7 @@ MethodID: 0xcc8c4fa7
 
 gpt는 1wei 와 10억 토큰 사이의 유동성 관련된 값이라고 설명해준다.
 
-여기서 [훅 컨트랙트 어드레스](https://etherscan.io/address/0xfaaad5b731f52cdc9746f2414c823eca9b06e844) 코드는 정확히 찾지 못했다.
+여기서 [훅 컨트랙트](https://etherscan.io/address/0xfaaad5b731f52cdc9746f2414c823eca9b06e844)의 코드는 정확히 찾지 못했다.
 
 ## 3. addFees
 
@@ -151,3 +151,147 @@ gpt는 1wei 와 10억 토큰 사이의 유동성 관련된 값이라고 설명�
 이 컨트랙트의 훅은 못찾았지만 다른 nft strategy 토큰의 훅은 [훅랭크](https://hookrank.io/1/0xe3c63a9813ac03be0e8618b627cb8170cfa468c4/liquidity-pools)에 등록되어있었다.
 
 ## 4. buyPunkAndRelist
+
+```solidity
+/// @notice Buys a punk from the market and relists it, paying a reward to the caller
+/// @param punkId The ID of the punk to buy and relist
+/// @dev Requires the punk to be for sale to anyone and sufficient fees (price + reward)
+function buyPunkAndRelist(uint256 punkId) external nonReentrant returns (uint256) {
+    IPunks punksContract = IPunks(PUNKS);
+
+    // Fetch punk offer details
+    (bool isForSale, , , uint256 minValue, address onlySellTo) = punksContract.punksOfferedForSale(punkId);
+
+    // Validate punk is for sale and available to anyone
+    if (!isForSale) revert PunkNotForSale();
+    if (onlySellTo != address(0)) revert PunkNotForSale();
+
+    // Calculate required ETH (punk price + reward)
+    uint256 totalRequired = minValue + reward;
+
+    // Check currentFees has sufficient balance
+    if (currentFees < totalRequired) revert InsufficientContractBalance();
+
+    // Buy the punk
+    punksContract.buyPunk{value: minValue}(punkId);
+
+    // Make sure we own it
+    if (punksContract.punkIndexToAddress(punkId) != address(this)) revert PunkNotOwned();
+
+    // Relist the punk at the configured multiplier price
+    punksContract.offerPunkForSale(punkId, minValue * priceMultiplier / 1000);
+
+    // Send reward to caller
+    SafeTransferLib.forceSafeTransferETH(msg.sender, reward);
+
+    // Deduct spent fees from currentFees
+    currentFees -= totalRequired;
+
+    // If this is the first punk purchase, update hook state
+    if (lastPunkSalePrice == 0) {
+        IPunkStrategyHook(hookAddress).punksAreAccumulating();
+    }
+
+    // Set last sale price to the punk price
+    lastPunkSalePrice = minValue;
+
+    return lastPunkSalePrice;
+}
+```
+
+[크립토 펑크 컨트랙트](https://etherscan.io/address/0xb47e3cd837ddf8e4c57f05d70ab865de6e193bbb)는 특이하게 erc20 으로 되어있다.
+
+buyPunkAndRelist 로직을 보면 크립토 펑크를 사서 priceMultiplier 배수 만큼 리스팅을 다시 올린다.
+
+그리고 재밌는건 이 함수를 호출한 사람에게 reward(0.01eth)를 챙겨주는데 스케줄러를 쓰지 않고 리워드를 먹고 싶으면 호출해라 라고 보인다.
+
+하지만 실제로 이 컨트랙트의 이 함수가 쓰이지 않는걸로 보인다.
+
+[최근 펑크를 구매한 트랜잭션](https://etherscan.io/tx/0xd6a7f155f4fb5ac37d390a2fbdf46c9b6df76a0554d2985f0fe356342c3a8613)을 보면 [특정 컨트랙트](https://etherscan.io/address/0x6ec1b656f9ea50c89827c7e820c303a6039550e3)에서 어떤 함수를 실행하면 PNKSTR 컨트랙트에서 비용을 지불하고  
+[크립토 펑크를 가지고 있는 컨트랙트](https://etherscan.io/address/0x1244eae9fa2c064453b5f605d708c0a0bfba4838)로 크립토 펑크가 이동된다.
+
+트랜잭션 기록을 살펴보면 buyPunkAndRelist 호출이 실패한 트랜잭션을 볼수 있다.
+
+그래서 다른 컨트랙트를 이용해서 디버깅을 한것으로 생각된다.
+
+개인적인 추측으론
+
+```solidity
+if (lastPunkSalePrice == 0) {
+    IPunkStrategyHook(hookAddress).punksAreAccumulating();
+}
+```
+
+이 부분에서 훅에 문제가 있지 않을까 추측된다.
+
+## 5. processPunkSale
+
+```solidity
+/// @notice Processes a punk sale by checking for new ETH, rewarding caller, and burning tokens
+/// @dev Verifies excess ETH above currentFees matches a punk sale, rewards caller, burns tokens with remaining ETH
+/// @return The amount of ETH processed from the sale
+function processPunkSale() external nonReentrant returns (uint256) {
+    if (lastPunkSalePrice == 0) revert NoPunksBoughtYet();
+
+    // Calculate excess ETH in contract beyond currentFees
+    uint256 excessEth = address(this).balance - currentFees;
+
+    // Verify excess matches a punk sale
+    if (excessEth <= lastPunkSalePrice) revert NoSaleToProcess();
+
+    // Use remaining ETH to buy and burn tokens
+    uint256 burnAmount = excessEth - reward;
+    _buyAndBurnTokens(burnAmount);
+
+    // Set fee cooldown on hook
+    IPunkStrategyHook(hookAddress).feeCooldown();
+
+    // Send reward to caller after burn completes
+    SafeTransferLib.forceSafeTransferETH(msg.sender, reward);
+
+    emit ProtocolFeesFromSales(excessEth);
+    return excessEth;
+}
+
+/// @notice Buys tokens with ETH and burns them by sending to dead address
+/// @param amountIn The amount of ETH to spend on tokens that will be burned
+function _buyAndBurnTokens(uint256 amountIn) internal {
+    PoolKey memory key = PoolKey(
+        Currency.wrap(address(0)),
+        Currency.wrap(address(this)),
+        0,
+        60,
+        IHooks(hookAddress)
+    );
+
+    router.swapExactTokensForTokens{value: amountIn}(
+        amountIn,
+        0,
+        true,
+        key,
+        "",
+        DEADADDRESS,
+        block.timestamp
+    );
+}
+```
+
+바이백을 하는 코드로 보이는데 이 코드를 보면 의아한 부분이 있다.
+
+왜 실제 팔린 펑크의 가격이 아니라 lastPunkSalePrice를 이용해서 바이백을 하는건지가 물음표다.
+
+실제론 buyPunkAndRelist 함수가 실행되지 않아서 lastPunkSalePrice 는 0이기 때문에 실행되지 않긴 한다.
+
+실제 [바이백 트랜잭션](https://etherscan.io/tx/0x8625888f5e018a62e2b5e0e4bd32cb0477213e409f27184f40c21cd447589bd0)을 보면 크립토 펑크를 가지고 있는 컨트랙트에서 호출하는데 거의 1블록 주기마다 1이더씩 바이백을 한다.
+
+그럼 바이백을 시작하기전에 토큰을 구매해놓고 바이백이 끝나면 팔면 되지 않을까 라는 생각도 해보지만 사고 팔때 수수료가 10%이기 때문에 계산을 잘해야 될듯 싶다.
+
+## 6. 후기
+
+어떤 컨트랙트를 이더스캔까지 뒤져보며 본건 거의 처음이다.
+
+재밌는 메커니즘을 보면서 인사이트도 얻었고 다른 컨트랙트 분석도 계속 해보려고 한다.
+
+실제 컨트랙트의 코드가 쓰이지 않고 다른 비공개 코드의 컨트랙트가 쓰이고 있어서 분석하기 어려웠다.
+
+다음은 nft strategy 를 분석해보려고 한다. 이건 hook 코드도 공개되어있기 때문에 훨씬 분석하기 편하겠지라는 생각이다.
