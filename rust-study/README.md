@@ -26,4 +26,16 @@ cargo 를 주로 사용해서 정리할거 같긴한데 간단한건 그냥 rust
 
 ---
 
-1. [comments]()
+번호는 헷갈리지 않기 위해서 easy rust와 똑같은 번호로 작성한다.
+
+7. [comments](https://github.com/TeTedo/blog-code/tree/main/rust-study/7.comment)
+
+8. [types](https://github.com/TeTedo/blog-code/tree/main/rust-study/8.comment)
+
+## reference
+
+- [easy rust doc](https://dhghomon.github.io/easy_rust/)
+
+- [easy rust youtube](https://www.youtube.com/playlist?list=PLfllocyHVgsSJf1zO6k6o3SX2mbZjAqYE)
+
+- [rust docs](https://doc.rust-lang.org/book/)
