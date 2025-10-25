@@ -64,3 +64,37 @@ fn main() {
 
 third_number: 106
 ```
+
+len 은 바이트수를 나타내준다.
+
+```rs
+use std::mem::size_of;
+
+fn main() {
+    println!("Size of a char: {}", size_of::<char>()); // 4 bytes
+    println!("Size of string containing 'a': {}", "a".len()); // .len() gives the size of the string in bytes
+    println!("Size of string containing 'ß': {}", "ß".len());
+    println!("Size of string containing '안': {}", "안".len());
+    println!("Size of string containing '𓅱': {}", "𓅱".len());
+}
+
+Size of a char: 4
+Size of string containing 'a': 1
+Size of string containing 'ß': 2
+Size of string containing '안': 3
+Size of string containing '𓅱': 4
+```
+
+만약 글자수를 알고 싶다면 slice.chars().count() 를 이용한다.
+
+```rs
+fn main() {
+    let slice = "안녕하세요!";
+    println!("Slice byte length: {}", slice.len());
+    println!("Slice character length: {}", slice.chars().count());
+}
+
+// 한글은 3바이트 !는 1바이트
+Slice byte length: 16
+Slice character length: 6
+```
