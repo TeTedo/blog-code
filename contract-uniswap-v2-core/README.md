@@ -155,7 +155,7 @@ factory에 token들의 주소를 저장시킨다.
 
 # 2. Pair
 
-pair 컨트랙트에는 유동성 넣고 빼기, 스왑 기능이 있다.
+pair 컨트랙트에는 유동성 넣고 빼기, 스왑 기능이 있다. Pair는 LP pool 이라고 생각하면 된다.
 
 ## (1) mint
 
@@ -198,7 +198,309 @@ function getReserves() public view returns (uint112 _reserve0, uint112 _reserve1
 
 뜬금없는 uint112가 나오는데 가스비 최적화를 위한 값이다.
 
-이를 이해하려면 이더리움의 스토리지 슬롯에 대해 알고 가야 한다.
+storage 의 한 슬롯은 256비트로 구성되는데 112, 112, 32 를 모두 더하면 256비트가 되기 때문에 슬롯 1개만을 사용하여 가스비를 절약할 수 있다.
+
+reserve0 과 reserve1은 예외가 있긴 하지만 전에 이 컨트랙트가 들고있던 token0과 token1의 개수라고 생각하면 편했다.
+
+정확히는 마지막으로 업데이트된 token0과 token1의 개수이다. mint, burn, swap, sync 함수가 실행될때 업데이트 된다.
+
+업데이트 안되어있으면 초기값은 0이다.
+
+그다음은 이 컨트랙트가 가지고 있는 실제 토큰들의 개수를 구한다.
+
+```solidity
+uint balance0 = IERC20(token0).balanceOf(address(this));
+uint balance1 = IERC20(token1).balanceOf(address(this));
+```
+
+이 실제 밸런스에서 전에 가지고 있던 토큰의 개수를 뺀다
+
+```solidity
+uint amount0 = balance0.sub(_reserve0);
+uint amount1 = balance1.sub(_reserve1);
+```
+
+그다음 mintFee를 계산한다.
+
+mintFee는 프로토콜 수수료인데 uniswap v2 whitepaper에서 2.4 Protocol fee 부분을 참고했다.
+
+```solidity
+bool feeOn = _mintFee(_reserve0, _reserve1);
+
+// if fee is on, mint liquidity equivalent to 1/6th of the growth in sqrt(k)
+function _mintFee(uint112 _reserve0, uint112 _reserve1) private returns (bool feeOn) {
+    address feeTo = IUniswapV2Factory(factory).feeTo();
+    feeOn = feeTo != address(0);
+    uint _kLast = kLast; // gas savings
+    if (feeOn) {
+        if (_kLast != 0) {
+            uint rootK = Math.sqrt(uint(_reserve0).mul(_reserve1));
+            uint rootKLast = Math.sqrt(_kLast);
+            if (rootK > rootKLast) {
+                uint numerator = totalSupply.mul(rootK.sub(rootKLast));
+                uint denominator = rootK.mul(5).add(rootKLast);
+                uint liquidity = numerator / denominator;
+                if (liquidity > 0) _mint(feeTo, liquidity);
+            }
+        }
+    } else if (_kLast != 0) {
+        kLast = 0;
+    }
+}
+```
+
+factory 컨트랙트에 feeTo가 설정되어있다면 가져온다. 이 feeTo 주소는 프로토콜의 수수료라고 생각하면 된다.
+
+```solidity
+address feeTo = IUniswapV2Factory(factory).feeTo();
+feeOn = feeTo != address(0);
+```
+
+다음은 좀 복잡한 부분을 보겠다. feeTo 가 있는 경우 어떻게 수수료를 챙기는지의 부분이다.
+
+```solidity
+if (_kLast != 0)
+```
+
+\_kLast는 이전 거래 후의 k값 (reserve0 x reserve1)을 저장한다.
+
+초기 상태에서는 kLast = 0 이므로 수수료를 계산할 기준점이 없다.
+
+마찬가지로 feeTo를 초기에 설정안했다가 중간에 설정하는 경우 feeTo를 설정한 시점 전까지는 수수료를 계산하지 않는다.
+
+```solidity
+uint rootK = Math.sqrt(uint(_reserve0).mul(_reserve1));
+uint rootKLast = Math.sqrt(_kLast);
+```
+
+\_reserve0 와 \_reserve1의 값은 swap 함수에서 update를 하는데 rootK 가 rootKLast보다 증가했다는 말은 전체 유동성 풀의 가치가 증가했다는 말이다.
+
+참고로 위에있던 kLast변수 할당은 mint와 burn 에서만 적용한다.
+
+```solidity
+uint _kLast = kLast;
+```
+
+왜냐하면 매번 swap할때마다 프로토콜에 수수료를 지급하는것보다 모아서 mint나 burn 할때 한번에 수수료를 받기 위해서라고 한다.
+
+다음은 uniswap v2 whitepaper 에서 수수료를 한번에 받는것과 관련된 문장이다.
+
+```
+Collecting this 0.05% fee at the time of the trade would impose an additional gas cost on
+every trade. To avoid this, accumulated fees are collected only when liquidity is deposited
+or withdrawn.
+```
+
+다음은 fee를 걷어가는 수학 공식을 코드로 표현했다.
+
+```solidity
+if (rootK > rootKLast) {
+    uint numerator = totalSupply.mul(rootK.sub(rootKLast));
+    uint denominator = rootK.mul(5).add(rootKLast);
+    uint liquidity = numerator / denominator;
+    if (liquidity > 0) _mint(feeTo, liquidity);
+}
+```
+
+white paper를 보고 공식을 차근차근 봐보겠다.
+
+$$f_{1,2} = 1 - \frac{\sqrt{k_1}}{\sqrt{k_2}}$$
+
+$$\sqrt{k_1} = rootKLast$$
+
+$$\sqrt{k_2} = rootK$$
+
+$$\frac{\sqrt{k_1}}{\sqrt{k_2}} = 현재 \;상태 \;대비 \;이전 \;상태의 \;비율$$
+
+$$f_{1,2} = 1 - \frac{\sqrt{k_1}}{\sqrt{k_2}} = 증가한 \;부분의 \;비율$$
+
+우선 증가한 부분의 비율을 구한다.
+
+feeTo가 설정되어있다면 수수료의 $\frac{1}{6}$을 프로토콜 수수료로 가져간다고 되어있다.
+
+```
+If the feeTo address is set, the protocol will begin charging a 5-basis-point fee, which is taken as a 1/6 cut of the 30-basis-point fees earned by liquidity providers
+```
+
+수수료는 LP 토큰을 민팅하는 방식으로 수집된다.
+
+증가한 부분 비율의 $\frac{1}{6}$만큼 새로운 LP 토큰을 프로토콜에게 민팅한다.
+
+$$
+s_m = 민팅 토큰의 양\\
+s_1 = total \;supply\\
+φ = \frac{1}{6}
+$$
+
+$$φ \times f_{1,2} = \frac{s_m}{s_m + s_1}$$
+
+전체중 민팅토큰의 양의 비율이 k값의 증가 비율의 1/6 이랑 같다.
+
+우리가 구하려는건 수수료로 민팅할 개수인 $s_m$이다.
+
+식을 정리해보면 다음과 같이 된다.
+
+$$(φ \times f_{1,2})({s_m + s_1})= s_m$$
+
+$$(φ \times f_{1,2})s_m + (φ \times f_{1,2}){s_1}= s_m$$
+
+$$(φ \times f_{1,2}){s_1}= s_m - (φ \times f_{1,2})s_m$$
+
+$$(φ \times f_{1,2}){s_1}= s_m(1- φ \times f_{1,2})$$
+
+$$\frac{(φ \times f_{1,2}){s_1}}{(1- φ \times f_{1,2})}= s_m$$
+
+$φ = \frac{1}{6}, f_{1,2} = 1 - \frac{\sqrt{k_1}}{\sqrt{k_2}}$ 를 대입해보면 아래와 같이 식이 만들어진다.
+
+$$\frac{(\frac{1}{6} \times (1 - \frac{\sqrt{k_1}}{\sqrt{k_2}})){s_1}}{(1- \frac{1}{6} \times (1 - \frac{\sqrt{k_1}}{\sqrt{k_2}}))}= s_m$$
+
+$$\frac{(\frac{1}{6} - \frac{1}{6}\frac{\sqrt{k_1}}{\sqrt{k_2}}){s_1}}{(1- (\frac{1}{6} - \frac{1}{6}\frac{\sqrt{k_1}}{\sqrt{k_2}}))}= s_m$$
+
+$$\frac{(\frac{1}{6} - \frac{1}{6}\frac{\sqrt{k_1}}{\sqrt{k_2}}){s_1}}{(\frac{5}{6} + \frac{1}{6}\frac{\sqrt{k_1}}{\sqrt{k_2}})}= s_m$$
+
+왼쪽 분수에 분자, 분모에 각각 $6\sqrt{k_2}$ 를 곱해주면 다음과 같이 정리된다.
+
+$$\frac{(\sqrt{k_2} - \sqrt{k_1}){s_1}}{5\sqrt{k_2} + \sqrt{k_1}}= s_m$$
+
+그러면 $s_m$ 은 위코드에서 계산한 값과 똑같이 계산되는걸 볼수 있다.
+
+```solidity
+uint numerator = totalSupply.mul(rootK.sub(rootKLast));
+uint denominator = rootK.mul(5).add(rootKLast);
+uint liquidity = numerator / denominator;
+```
+
+`uint liquidity = numerator / denominator;` 에서 uint는 소수점을 허용하지 때문에 liquidity는 1이상인 값이 나와야한다.
+
+다른 말로 바꿔보면 k값이 커져도 totalSupply 가 크지 않다면 수수료를 민팅하지 않는다는 것이다.
+
+```solidity
+if (liquidity > 0) _mint(feeTo, liquidity);
+```
+
+```solidity
+function _mint(address to, uint value) internal {
+    totalSupply = totalSupply.add(value);
+    balanceOf[to] = balanceOf[to].add(value);
+    emit Transfer(address(0), to, value);
+}
+```
+
+다음은 feeTo가 설정되지 않은 조건을 보겠다.
+
+```solidity
+else if (_kLast != 0) {
+    kLast = 0;
+}
+```
+
+지금은 feeTo가 없지만 이전에는 있었다는 뜻이다.
+
+그래서 다음에 다시 feeTo를 설정할때 같은 로직을 적용하기 위해 kLast를 0으로 값을 넣는다.
+
+mint 함수를 마저 본다면 바뀐 totalSupply를 적용하고 totalSupply에 따라서 조건을 나눈다.
+
+```solidity
+uint _totalSupply = totalSupply; // gas savings, must be defined here since totalSupply can update in _mintFee
+```
+
+먼저 SLOAD라는 스토리지에서 읽는 op code를 실행할때 비용을 아끼기 위해 \_totalSupply라는 변수에 totalSupply를 넣는다. 추가로 위의 \_mintFee에서 totalSupply가 바뀔수 있기때문이라고도 한다.
+
+그 다음은 totalSupply가 0인지 아닌지에 따라서 조건문을 탄다.
+
+```solidity
+if (_totalSupply == 0) {
+    liquidity = Math.sqrt(amount0.mul(amount1)).sub(MINIMUM_LIQUIDITY);
+    _mint(address(0), MINIMUM_LIQUIDITY); // permanently lock the first MINIMUM_LIQUIDITY tokens
+} else {
+    liquidity = Math.min(amount0.mul(_totalSupply) / _reserve0, amount1.mul(_totalSupply) / _reserve1);
+}
+```
+
+totalSupply가 0이라면 1000wei 만큼 유동성을 address(0)으로 보낸다.
+
+이렇게 되면 1000wei가 이미 민팅되었으니 1wei를 과도하게 비싸게 만들려면 꽤 많은 금액이 들어가야한다. 동시에 totalSupply가 다시 0이 되는걸 방지한다.
+
+처음 mint를 실행한 경우이기때문에 유저가 가져갈 LP 토큰은 다음과 같이 계산된다.
+
+$$s_{minted} = \sqrt{x_{deposited} \times y_{deposited}} - 1000$$
+
+이는 초기에 넣은 x, y 값의 비율에 의존하기 위함이다.
+
+totalSupply가 0이 아니라면 두값중 작은값을 선택한다.
+
+$$\frac{amount0 \times totalSupply}{reserve0}\; or\; \frac{amount1 \times totalSupply}{reserve1}$$
+
+token0 이 늘어난 비율과 token1이 늘어난 비율 중 작은값 만큼 totalSupply에서 민팅한다는 것이다.
+
+왜 더 작은값을 선택해야하는지 아래에 예시를 들겠다.
+
+```
+현재 : 10ETH, 40,000USDT  1ETH/4000USDT
+추가 : 1ETH, 2,000USDT    1ETH/2000USDT
+totalSupply = 1000 개라고 한다면
+
+amount0 x totalSupply / reserve0 = 1 x 1000 / 10 = 100
+amount1 x totalSupply / reserve1 = 2000 x 1000 / 40000 = 50
+
+ETH 기준 계산으론 100개 민팅
+USDT 기준 계산으론 50개 민팅
+
+즉 더 작은값을 선택하여 공정성과 일관성을 유지하는것이다.
+```
+
+다음은 선택한 liquidity 값이 0 이상인지 확인 후 민팅한다
+
+```solidity
+require(liquidity > 0, 'UniswapV2: INSUFFICIENT_LIQUIDITY_MINTED');
+_mint(to, liquidity);
+```
+
+민팅 후 실제 balance를 reserve에 업데이트 한다.
+
+```solidity
+_update(balance0, balance1, _reserve0, _reserve1);
+```
+
+\_update 함수를 들여다 보면 다음과 같다.
+
+```solidity
+// update reserves and, on the first call per block, price accumulators
+function _update(uint balance0, uint balance1, uint112 _reserve0, uint112 _reserve1) private {
+    require(balance0 <= uint112(-1) && balance1 <= uint112(-1), 'UniswapV2: OVERFLOW');
+    uint32 blockTimestamp = uint32(block.timestamp % 2**32);
+    uint32 timeElapsed = blockTimestamp - blockTimestampLast; // overflow is desired
+    if (timeElapsed > 0 && _reserve0 != 0 && _reserve1 != 0) {
+        // * never overflows, and + overflow is desired
+        price0CumulativeLast += uint(UQ112x112.encode(_reserve1).uqdiv(_reserve0)) * timeElapsed;
+        price1CumulativeLast += uint(UQ112x112.encode(_reserve0).uqdiv(_reserve1)) * timeElapsed;
+    }
+    reserve0 = uint112(balance0);
+    reserve1 = uint112(balance1);
+    blockTimestampLast = blockTimestamp;
+    emit Sync(reserve0, reserve1);
+}
+```
+
+요것도 찬찬히 보겠다.
+
+```solidity
+require(balance0 <= uint112(-1) && balance1 <= uint112(-1), 'UniswapV2: OVERFLOW');
+uint32 blockTimestamp = uint32(block.timestamp % 2**32);
+uint32 timeElapsed = blockTimestamp - blockTimestampLast; // overflow is desired
+```
+
+balance들이 112비트로 표시할수 있는 값인지 먼저 체크하고 32비트 기반으로 timestamp를 계산한다.
+
+```solidity
+if (timeElapsed > 0 && _reserve0 != 0 && _reserve1 != 0) {
+    // * never overflows, and + overflow is desired
+    price0CumulativeLast += uint(UQ112x112.encode(_reserve1).uqdiv(_reserve0)) * timeElapsed;
+    price1CumulativeLast += uint(UQ112x112.encode(_reserve0).uqdiv(_reserve1)) * timeElapsed;
+}
+```
+
+이 부분은 가격 계산을 위한 값이다.
 
 ## (2) burn
 
@@ -207,6 +509,8 @@ function getReserves() public view returns (uint112 _reserve0, uint112 _reserve1
 ## reference
 
 [uniswap v2 core](https://github.com/Uniswap/v2-core)
+
+[uniswap v2 whitepaper](https://app.uniswap.org/whitepaper.pdf)
 
 [solidity 공식문서](https://docs.soliditylang.org)
 
