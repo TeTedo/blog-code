@@ -110,6 +110,8 @@
 
 - [AWS ECS 설정하면서 이슈들](https://github.com/TeTedo/blog-code/tree/main/aws-ecs)
 
+- [10kb 이상 파일 업로드가 안되는데요?](https://github.com/TeTedo/blog-code/tree/main/aws-waf-body-size)
+
 # Rust
 
 - [Rust 기초 study](https://github.com/TeTedo/blog-code/tree/main/rust-study)
