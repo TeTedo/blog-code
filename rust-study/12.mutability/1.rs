@@ -1,8 +1,5 @@
-fn give_number(one: i32, two: i32) -> i32 {
-    one + two
-}
-
 fn main () {
-    let my_number = give_number(1, 2);
+    let mut my_number = 10;
+    my_number = 9;
     println!("my_number: {}", my_number);
 }

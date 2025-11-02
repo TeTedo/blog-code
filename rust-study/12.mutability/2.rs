@@ -1,14 +1,6 @@
-fn times_tow(number: i32) -> i32 {
-    number * 2
-}
-
-fn main () {
-
-    let final_number = {
-        let first_number = 1;
-        let second_number = 2;
-        times_tow(first_number + second_number)
-    };
-
-    println!("final_number: {}", final_number)
+fn main() {
+    let my_number = 8; // This is an i32
+    println!("{}", my_number); // prints 8
+    let my_number = 9.2; // This is an f64 with the same name. But it's not the first my_number - it is completely different!
+    println!("{}", my_number) // Prints 9.2
 }
