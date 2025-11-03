@@ -206,6 +206,118 @@ The NoPackedVariables contract is more gas efficient than the PackedVariables co
 
 Let's see the result by test code.
 
+```ts
+describe("Gas Comparison", function () {
+  it("PackedVariables should use less gas than NoPackedVariables in readSum function", async function () {
+    const { packedVariables, noPackedVariables } = await loadFixture(
+      deployContract
+    );
+
+    const measureAverageGas = async (
+      contract: any,
+      functionName: string,
+      times: number
+    ) => {
+      const gasPromises = [];
+      for (let i = 0; i < times; i++) {
+        gasPromises.push(contract[functionName].estimateGas());
+      }
+      const gasUsages = await Promise.all(gasPromises);
+      return gasUsages.reduce((a, b) => a + Number(b), 0) / gasUsages.length;
+    };
+
+    const packedVariablesGas = await measureAverageGas(
+      packedVariables,
+      "readSum",
+      10
+    );
+
+    const noPackedVariablesGas = await measureAverageGas(
+      noPackedVariables,
+      "readSum",
+      10
+    );
+
+    console.log(`\n=== Gas Comparison (10 runs) ===`);
+    console.log(
+      `PackedVariables.readSum() average gas: ${packedVariablesGas.toFixed(0)}`
+    );
+    console.log(
+      `NoPackedVariables.readSum() average gas: ${noPackedVariablesGas.toFixed(
+        0
+      )}`
+    );
+    console.log(
+      `Gas saved: ${(noPackedVariablesGas - packedVariablesGas).toFixed(0)}`
+    );
+
+    expect(packedVariablesGas).to.be.lessThan(noPackedVariablesGas);
+  });
+
+  it("NoPackedVariables should use less gas than PackedVariables in readA function", async function () {
+    const { packedVariables, noPackedVariables } = await loadFixture(
+      deployContract
+    );
+
+    const measureAverageGas = async (
+      contract: any,
+      functionName: string,
+      times: number
+    ) => {
+      const gasPromises = [];
+      for (let i = 0; i < times; i++) {
+        gasPromises.push(contract[functionName].estimateGas());
+      }
+      const gasUsages = await Promise.all(gasPromises);
+      return gasUsages.reduce((a, b) => a + Number(b), 0) / gasUsages.length;
+    };
+
+    const noPackedVariablesGas = await measureAverageGas(
+      noPackedVariables,
+      "readA",
+      10
+    );
+
+    const packedVariablesGas = await measureAverageGas(
+      packedVariables,
+      "readA",
+      10
+    );
+
+    console.log(`\n=== Gas Comparison (10 runs) ===`);
+    console.log(
+      `NoPackedVariables.readA() average gas: ${noPackedVariablesGas.toFixed(
+        0
+      )}`
+    );
+    console.log(
+      `PackedVariables.readA() average gas: ${packedVariablesGas.toFixed(0)}`
+    );
+    console.log(
+      `Gas saved: ${(packedVariablesGas - noPackedVariablesGas).toFixed(0)}`
+    );
+
+    expect(noPackedVariablesGas).to.be.lessThan(packedVariablesGas);
+  });
+});
+```
+
+The result is like this.
+
+```
+=== Gas Comparison (10 runs) ===
+PackedVariables.readSum() average gas: 23926
+NoPackedVariables.readSum() average gas: 25789
+Gas saved: 1863
+      ✔ PackedVariables should use less gas than NoPackedVariables in readSum function
+
+=== Gas Comparison (10 runs) ===
+NoPackedVariables.readA() average gas: 23479
+PackedVariables.readA() average gas: 23521
+Gas saved: 42
+      ✔ NoPackedVariables should use less gas than PackedVariables in readA function
+```
+
 ## references
 
 [Ethereum opcode docs](https://ethereum.org/developers/docs/evm/opcodes/)

@@ -8,6 +8,10 @@ contract PackedVariables {
     function readA() public view returns (uint256) {
         return a;
     }
+
+    function readSum() public view returns (uint256) {
+        return a + b;
+    }
 }
 
 contract NoPackedVariables {
@@ -16,6 +20,10 @@ contract NoPackedVariables {
 
     function readA() public view returns (uint256) {
         return a;
+    }
+
+    function readSum() public view returns (uint256) {
+        return a + b;
     }
 }
 
