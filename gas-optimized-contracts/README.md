@@ -1,6 +1,6 @@
 # Gas Optimized Contracts
 
-I write about gas optimization when i write contract code with reference to [nodeguardians gas optimization campaign](https://nodeguardians.io/campaigns/gas-optimization)
+I will explain about gas optimization when writing contract code with reference to [nodeguardians gas optimization campaign](https://nodeguardians.io/campaigns/gas-optimization)
 
 You can find the all of codes in [Github](https://github.com/TeTedo/blog-code/tree/main/gas-optimized-contracts).
 
@@ -149,11 +149,45 @@ contract PackedVariables {
     uint128 a; // ┐
     uint128 b; // ┴─ Slot 0
 
-    function readA() public view returns (uint256) {
-        return a;
+    function readSum() public view returns (uint128) {
+        return a + b;
     }
 }
 
+contract NoPackedVariables {
+    uint256 a; // └─ Slot 0
+    uint256 b; // └─ Slot 1
+
+    function readSum() public view returns (uint128) {
+        return a + b;
+    }
+}
+```
+
+PackedVariables contract will require 1 256-bit storage slot.
+
+NoPackedVariables contract will require 2 256-bit storage slots.
+
+In `readSum` function, the PackedVariables contract will use 1 SLOAD opcode and 1 ADD opcode.
+
+On the other hand, the NoPackedVariables contract will use 2 SLOAD opcodes and 1 ADD opcode.
+
+Does this mean, ignoring overflow, packed variable contract is more gas efficient always?
+
+But it's not true always. Let's see the next example.
+
+```solidity
+contract PackedVariables {
+    uint128 a; // ┐
+    uint128 b; // ┴─ Slot 0
+
+    function readA() public view returns (uint128) {
+        return a;
+    }
+}
+```
+
+```solidity
 contract NoPackedVariables {
     uint256 a; // └─ Slot 0
     uint256 b; // └─ Slot 1
@@ -164,11 +198,13 @@ contract NoPackedVariables {
 }
 ```
 
-PackedVariables contract will require 1 256-bit storage slot.
+The PackedVariables contract will require 1 SLOAD opcode and more to devide a and b.
 
-NoPackedVariables contract will require 2 256-bit storage slots.
+On the other hand, the NoPackedVariables contract will require just 1 SLOAD.
 
-Does this mean, ignoring overflow, packed variable contract is more gas efficient?
+The NoPackedVariables contract is more gas efficient than the PackedVariables contract in this case.
+
+Let's see the result by test code.
 
 ## references
 
@@ -177,3 +213,7 @@ Does this mean, ignoring overflow, packed variable contract is more gas efficien
 [nodeguardians gas optimization campaign](https://nodeguardians.io/campaigns/gas-optimization)
 
 [EVM.codes](https://www.evm.codes/)
+
+```
+
+```
