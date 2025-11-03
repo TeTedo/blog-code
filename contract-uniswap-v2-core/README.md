@@ -502,9 +502,318 @@ if (timeElapsed > 0 && _reserve0 != 0 && _reserve1 != 0) {
 
 이 부분은 가격 계산을 위한 값이다.
 
+소수점의 오차를 줄이기 위해 UQ112x112 라이브러리를 사용해서 2^112 를 곱한값으로 사용한다.
+
+타임스탬프가 32비트이므로 256비트기준으로 224비트가 남는다.
+
+$2^{112} \times 2^{112} = 2^{224}$ 이므로 112비트인 reserve 값을 224 비트로 표현해서 소수점의 오차를 줄이는 것이다.
+
+```solidity
+reserve0 = uint112(balance0);
+reserve1 = uint112(balance1);
+blockTimestampLast = blockTimestamp;
+emit Sync(reserve0, reserve1);
+```
+
+파라미터로 넣은 값들을 컨트랙트 스토어에 저장한다.
+
+다시 mint 함수로 돌아와서
+
+```solidity
+if (feeOn) kLast = uint(reserve0).mul(reserve1); // reserve0 and reserve1 are up-to-date
+```
+
+feeOn 이 true 라면 kLast 를 컨트랙트 스토어에 저장한다.
+
+마지막으로 Mint event를 발생시킨다.
+
+```solidity
+emit Mint(msg.sender, amount0, amount1);
+```
+
 ## (2) burn
 
+mint를 다 봤으면 burn을 그나마 수월하다.
+
+```solidity
+function burn(address to) external lock returns (uint amount0, uint amount1) {
+    (uint112 _reserve0, uint112 _reserve1,) = getReserves(); // gas savings
+    address _token0 = token0;                                // gas savings
+    address _token1 = token1;                                // gas savings
+    uint balance0 = IERC20(_token0).balanceOf(address(this));
+    uint balance1 = IERC20(_token1).balanceOf(address(this));
+    uint liquidity = balanceOf[address(this)];
+
+    bool feeOn = _mintFee(_reserve0, _reserve1);
+    uint _totalSupply = totalSupply; // gas savings, must be defined here since totalSupply can update in _mintFee
+    amount0 = liquidity.mul(balance0) / _totalSupply; // using balances ensures pro-rata distribution
+    amount1 = liquidity.mul(balance1) / _totalSupply; // using balances ensures pro-rata distribution
+    require(amount0 > 0 && amount1 > 0, 'UniswapV2: INSUFFICIENT_LIQUIDITY_BURNED');
+    _burn(address(this), liquidity);
+    _safeTransfer(_token0, to, amount0);
+    _safeTransfer(_token1, to, amount1);
+    balance0 = IERC20(_token0).balanceOf(address(this));
+    balance1 = IERC20(_token1).balanceOf(address(this));
+
+    _update(balance0, balance1, _reserve0, _reserve1);
+    if (feeOn) kLast = uint(reserve0).mul(reserve1); // reserve0 and reserve1 are up-to-date
+    emit Burn(msg.sender, amount0, amount1, to);
+}
+```
+
+이것도 차근차근 보면
+
+```solidity
+(uint112 _reserve0, uint112 _reserve1,) = getReserves(); // 이전까지 적용된 토큰의 개수를 받아오고
+address _token0 = token0;
+address _token1 = token1; // 토큰 컨트랙트 불러오고
+uint balance0 = IERC20(_token0).balanceOf(address(this));
+uint balance1 = IERC20(_token1).balanceOf(address(this)); // 실제 컨트랙트가 가지고 있는 수량을 가져온다.
+
+uint liquidity = balanceOf[address(this)]; // 이 컨트랙트의 balance 를 가져오는데 burn 함수를 호출하기전에 이 컨트랙트에 토큰을 전송하는걸로 추측된다.
+
+bool feeOn = _mintFee(_reserve0, _reserve1); // mint 함수와 마찬가지로 수수료를 챙긴다.
+```
+
+그다음은 liquidity 의 개수만큼 토큰을 받는 로직이다.
+
+```solidity
+uint _totalSupply = totalSupply; // gas savings, must be defined here since totalSupply can update in _mintFee
+amount0 = liquidity.mul(balance0) / _totalSupply; // using balances ensures pro-rata distribution
+amount1 = liquidity.mul(balance1) / _totalSupply; // using balances ensures pro-rata distribution
+```
+
+위 식은 실제 잔액에서 전체 발행된 liquidity 에서 burn 시키려는 liquidity의 비율만큼 각 토큰을 받는것이다.
+
+그다음 liquidity 만큼의 토큰을 소각시키고 토큰0과 토큰1을 to에게 보내준다.
+
+```solidity
+_burn(address(this), liquidity);
+_safeTransfer(_token0, to, amount0);
+_safeTransfer(_token1, to, amount1);
+```
+
+그 뒤는 mint 와 동일하게 update 후 kLast를 업데이트 시켜준다.
+
+```solidity
+ _update(balance0, balance1, _reserve0, _reserve1);
+if (feeOn) kLast = uint(reserve0).mul(reserve1); // reserve0 and reserve1 are up-to-date
+emit Burn(msg.sender, amount0, amount1, to);
+```
+
 ## (3) swap
+
+swap 함수는 토큰을 교환하는 핵심 함수이다. Uniswap V2의 AMM 메커니즘을 구현한 부분으로, constant product formula를 기반으로 거래를 실행한다.
+
+```solidity
+function swap(uint amount0Out, uint amount1Out, address to, bytes calldata data) external lock {
+    require(amount0Out > 0 || amount1Out > 0, 'UniswapV2: INSUFFICIENT_OUTPUT_AMOUNT');
+    (uint112 _reserve0, uint112 _reserve1,) = getReserves(); // gas savings
+    require(amount0Out < _reserve0 && amount1Out < _reserve1, 'UniswapV2: INSUFFICIENT_LIQUIDITY');
+
+    uint balance0;
+    uint balance1;
+    { // scope for _token{0,1}, avoids stack too deep errors
+    address _token0 = token0;
+    address _token1 = token1;
+    require(to != _token0 && to != _token1, 'UniswapV2: INVALID_TO');
+    if (amount0Out > 0) _safeTransfer(_token0, to, amount0Out); // optimistically transfer tokens
+    if (amount1Out > 0) _safeTransfer(_token1, to, amount1Out); // optimistically transfer tokens
+    if (data.length > 0) IUniswapV2Callee(to).uniswapV2Call(msg.sender, amount0Out, amount1Out, data);
+    balance0 = IERC20(_token0).balanceOf(address(this));
+    balance1 = IERC20(_token1).balanceOf(address(this));
+    }
+    uint amount0In = balance0 > _reserve0 - amount0Out ? balance0 - (_reserve0 - amount0Out) : 0;
+    uint amount1In = balance1 > _reserve1 - amount1Out ? balance1 - (_reserve1 - amount1Out) : 0;
+    require(amount0In > 0 || amount1In > 0, 'UniswapV2: INSUFFICIENT_INPUT_AMOUNT');
+    { // scope for reserve{0,1}Adjusted, avoids stack too deep errors
+    uint balance0Adjusted = balance0.mul(1000).sub(amount0In.mul(3));
+    uint balance1Adjusted = balance1.mul(1000).sub(amount1In.mul(3));
+    require(balance0Adjusted.mul(balance1Adjusted) >= uint(_reserve0).mul(_reserve1).mul(1000**2), 'UniswapV2: K');
+    }
+
+    _update(balance0, balance1, _reserve0, _reserve1);
+    emit Swap(msg.sender, amount0In, amount1In, amount0Out, amount1Out, to);
+}
+```
+
+차근차근 분석해보겠다.
+
+### (1) 기본 검증
+
+```solidity
+require(amount0Out > 0 || amount1Out > 0, 'UniswapV2: INSUFFICIENT_OUTPUT_AMOUNT');
+(uint112 _reserve0, uint112 _reserve1,) = getReserves(); // gas savings
+require(amount0Out < _reserve0 && amount1Out < _reserve1, 'UniswapV2: INSUFFICIENT_LIQUIDITY');
+```
+
+첫 번째 검증은 출력 토큰 중 하나라도 0보다 큰지 확인한다. 두 번째는 이전에 설명한 getReserves 함수를 사용해서 현재 리저브를 가져온다. 마지막으로 출력 토큰 양이 리저브보다 작은지 확인한다. 이는 유동성이 충분한지 확인하는 검증이다.
+
+### (2) Optimistic Transfer와 Flash Swap
+
+```solidity
+{ // scope for _token{0,1}, avoids stack too deep errors
+address _token0 = token0;
+address _token1 = token1;
+require(to != _token0 && to != _token1, 'UniswapV2: INVALID_TO');
+if (amount0Out > 0) _safeTransfer(_token0, to, amount0Out); // optimistically transfer tokens
+if (amount1Out > 0) _safeTransfer(_token1, to, amount1Out); // optimistically transfer tokens
+if (data.length > 0) IUniswapV2Callee(to).uniswapV2Call(msg.sender, amount0Out, amount1Out, data);
+balance0 = IERC20(_token0).balanceOf(address(this));
+balance1 = IERC20(_token1).balanceOf(address(this));
+}
+```
+
+이 부분은 Uniswap V2의 핵심 특징 중 하나인 **Flash Swap** 기능을 구현한 부분이다.
+
+먼저 토큰 주소를 로컬 변수에 저장한다. 이는 가스 절약과 스택 깊이 제한 회피를 위한 최적화이다.
+
+```solidity
+require(to != _token0 && to != _token1, 'UniswapV2: INVALID_TO');
+```
+
+이 검증은 토큰이 자기 자신에게 전송되는 것을 방지한다.
+
+```solidity
+if (amount0Out > 0) _safeTransfer(_token0, to, amount0Out);
+if (amount1Out > 0) _safeTransfer(_token1, to, amount1Out);
+```
+
+**Optimistic Transfer**라고 불리는 이 방식은 입력 토큰을 받기 전에 출력 토큰을 먼저 전송한다.
+
+왜 이렇게 설계했냐면 Flash Swap을 지원하기 위해서이다. Flash Swap은 사용자가 출력 토큰을 먼저 받아서 다른 작업을 수행한 후, 나중에 입력 토큰을 반환하는 메커니즘이다.
+
+```solidity
+if (data.length > 0) IUniswapV2Callee(to).uniswapV2Call(msg.sender, amount0Out, amount1Out, data);
+```
+
+만약 `data.length > 0`이면, `to` 주소가 `IUniswapV2Callee` 인터페이스를 구현한 컨트랙트라는 의미이다. 이 경우 `uniswapV2Call` 함수를 호출하여 Flash Swap을 실행한다.
+
+**Flash Swap 사용 예시:**
+
+1. 사용자가 DAI를 받고 싶지만 가지고 있지 않음
+2. Flash Swap으로 DAI를 먼저 받음
+3. 받은 DAI로 다른 거래 수행
+4. 그 거래의 수익으로 ETH를 얻음
+5. ETH를 Uniswap에 반환하여 DAI 대금 지불
+
+이렇게 하면 자본 없이도 거래가 가능하다.
+
+전송 후 실제 잔액을 확인한다:
+
+```solidity
+balance0 = IERC20(_token0).balanceOf(address(this));
+balance1 = IERC20(_token1).balanceOf(address(this));
+```
+
+### (3) 실제 입력량 계산
+
+```solidity
+uint amount0In = balance0 > _reserve0 - amount0Out ? balance0 - (_reserve0 - amount0Out) : 0;
+uint amount1In = balance1 > _reserve1 - amount1Out ? balance1 - (_reserve1 - amount1Out) : 0;
+require(amount0In > 0 || amount1In > 0, 'UniswapV2: INSUFFICIENT_INPUT_AMOUNT');
+```
+
+이 부분은 실제로 입력된 토큰 양을 계산한다.
+
+- `_reserve0 - amount0Out`: 출력 후 예상 리저브
+- `balance0 > _reserve0 - amount0Out`: 실제 잔액이 예상 리저브보다 큰지 확인
+- `balance0 - (_reserve0 - amount0Out)`: 차이만큼이 입력량
+
+### (4) K 값 검증 (Constant Product Formula with Fees)
+
+```solidity
+{ // scope for reserve{0,1}Adjusted, avoids stack too deep errors
+uint balance0Adjusted = balance0.mul(1000).sub(amount0In.mul(3));
+uint balance1Adjusted = balance1.mul(1000).sub(amount1In.mul(3));
+require(balance0Adjusted.mul(balance1Adjusted) >= uint(_reserve0).mul(_reserve1).mul(1000**2), 'UniswapV2: K');
+}
+```
+
+이 부분은 Uniswap V2의 핵심인 **Constant Product Formula**를 수수료를 포함하여 검증하는 부분이다.
+
+**Uniswap V2의 수수료:**
+
+- 거래당 0.3% (30 basis points)
+- 이 중 0.05% (5 basis points)는 프로토콜 수수료 (feeTo가 설정된 경우)
+
+이를 수식으로 표현하면:
+$$balance_{adjusted} = balance \times 1000 - amountIn \times 3$$
+$$= balance \times 1000 - amountIn \times (1000 \times 0.003)$$
+
+실제 검증 공식:
+$$balance0_{adjusted} \times balance1_{adjusted} \geq reserve0 \times reserve1 \times 1000^2$$
+
+이를 풀어쓰면:
+$$(balance0 \times 1000 - amount0In \times 3) \times (balance1 \times 1000 - amount1In \times 3) \geq reserve0 \times reserve1 \times 1000^2$$
+
+양변을 1000²로 나누면:
+$$\frac{balance0 \times 1000 - amount0In \times 3}{1000} \times \frac{balance1 \times 1000 - amount1In \times 3}{1000} \geq reserve0 \times reserve1$$
+
+$$(balance0 - \frac{amount0In \times 3}{1000}) \times (balance1 - \frac{amount1In \times 3}{1000}) \geq reserve0 \times reserve1$$
+
+$$(balance0 - amount0In \times 0.003) \times (balance1 - amount1In \times 0.003) \geq reserve0 \times reserve1$$
+
+즉, 수수료(0.3%)를 뺀 후에도 K 값이 유지되거나 증가해야 한다는 의미이다.
+
+- 수수료(0.3%)를 제외한 후의 K 값이 이전 K 값보다 크거나 같아야 함
+- 이는 수수료가 제대로 적용되었는지 확인하는 검증이다
+
+### (5) 리저브 업데이트
+
+```solidity
+_update(balance0, balance1, _reserve0, _reserve1);
+emit Swap(msg.sender, amount0In, amount1In, amount0Out, amount1Out, to);
+```
+
+검증을 통과하면 `_update` 함수를 호출하여 리저브를 업데이트하고 가격 누적값도 업데이트한다. 마지막으로 Swap 이벤트를 발생시켜 거래를 기록한다.
+
+**Swap 함수의 전체 흐름:**
+
+1. 입력 검증 (출력량, 유동성 확인)
+2. Optimistic Transfer (출력 토큰 먼저 전송)
+3. Flash Swap 콜백 (필요한 경우)
+4. 실제 입력량 계산
+5. K 값 검증 (수수료 포함)
+6. 리저브 업데이트
+7. 이벤트 발생
+
+마지막으로 예시를 보면 아래와 같다.
+
+```
+1. 사용자가 swap 함수 호출
+   └─ amount0Out = 0
+   └─ amount1Out = 1000 DAI
+   └─ to = MyContract (Flash Swap을 수행할 컨트랙트)
+   └─ data = "arbitrage_data" (다른 거래에 필요한 정보)
+
+2. Uniswap Pair가 DAI 전송
+   └─ _safeTransfer(DAI, MyContract, 1000)
+   └─ Pair 잔액: DAI가 1000 감소
+
+3. uniswapV2Call 콜백 실행
+   └─ MyContract.uniswapV2Call() 실행
+   └─ 이 함수 내부에서:
+      a) 받은 1000 DAI로 다른 거래 수행
+      b) 예: 다른 DEX에서 ETH 구매
+      c) 그 ETH를 판매하여 DAI + 수익 확보
+      d) Uniswap에 지불할 ETH 계산 및 전송
+
+4. balance 확인
+   └─ balance0 = IERC20(ETH).balanceOf(Pair)
+   └─ balance1 = IERC20(DAI).balanceOf(Pair)
+   └─ 만약 MyContract가 ETH를 제대로 전송했다면:
+      balance0 = 이전 + 지불할_ETH
+      balance1 = 이전 - 1000 (이미 전송됨)
+
+5. 입력량 계산
+   └─ amount0In = balance0 - (_reserve0 - 0)
+   └─ = 지불한_ETH_양
+
+6. K 값 검증
+   └─ 수수료를 포함한 K 값이 유지되는지 확인
+   └─ 실패하면 전체 트랜잭션 revert
+```
 
 ## reference
 
