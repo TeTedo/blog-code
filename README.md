@@ -46,6 +46,8 @@
 
 - [PNKSTR 토큰 분석](https://github.com/TeTedo/blog-code/tree/main/contract-PNKSTR)
 
+- [Uniswap v2 core](https://github.com/TeTedo/blog-code/tree/main/contract-uniswap-v2-core)
+
 # Spring
 
 ### Cloud
