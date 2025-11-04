@@ -48,6 +48,8 @@
 
 - [Uniswap v2 core](https://github.com/TeTedo/blog-code/tree/main/contract-uniswap-v2-core)
 
+- [Gas Optimized Contracts](https://github.com/TeTedo/blog-code/tree/main/gas-optimized-contracts)
+
 # Spring
 
 ### Cloud
