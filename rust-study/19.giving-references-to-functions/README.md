@@ -55,3 +55,37 @@ fn main() {
     print_country(&country);
 }
 ```
+
+function 에서 &mut reference를 받아 값을 사용할수 있다.
+
+```rs
+fn add_is_great(country_name: &mut String) {
+    country_name.push_str(" is great!");
+    println!("{}", country_name);
+}
+
+fn main() {
+    let mut country = String::from("대한민국");
+    add_is_great(&mut country);
+    add_is_great(&mut country);
+}
+
+대한민국 is great!
+대한민국 is great! is great!
+```
+
+좀 다르게 작성할수 있다.
+
+```rs
+fn add_is_great(mut country_name: String) {
+    country_name.push_str(" is great!");
+    println!("{}", country_name);
+}
+
+fn main() {
+    let country = String::from("대한민국");
+    add_is_great(country);
+}
+```
+
+country 가 `대한민국`의 소유권을 가지고 있다가 아예 add_is_great 함수에게 주는거다.
