@@ -78,3 +78,79 @@ fn main() {
 ```
 
 조건에 있는 튜플은 아무 이름으로 지정해도 된다.
+
+---
+
+좀 더 복잡한 match 문을 작성할 수도 있다.
+
+```rs
+fn match_colors(rbg: (i32, i32, i32)) {
+    match rbg {
+        (r, _, _) if r < 10 => println!("Not much red"),
+        (_, g, _) if g < 10 => println!("Not much green"),
+        (_, _, b) if b < 10 => println!("Not much blue"),
+        _ => println!("A lot of color"),
+    }
+}
+
+fn main() {
+    let first_color = (10, 10, 10);
+    let second_color = (1, 2, 3);
+    match_colors(first_color);
+    match_colors(second_color);
+}
+
+A lot of color
+Not much red
+```
+
+if문과 match는 하나의 타입만 return 할수 있다.
+
+```rs
+fn main() {
+    let my_number = 5;
+    match my_number {
+        1 => 1,
+        2 => 2,
+        3 => println!("Three"),
+        _ => "Not 1, 2, or 3",
+    }
+}
+
+
+| /     match my_number {
+4 | |         1 => 1,
+  | |              - this is found to be of type `{integer}`
+5 | |         2 => 2,
+  | |              - this is found to be of type `{integer}`
+6 | |         3 => println!("Three"),
+  | |              ^^^^^^^^^^^^^^^^^ expected integer, found `()`
+7 | |         _ => "Not 1, 2, or 3",
+8 | |     }
+  | |_____- `match` arms have incompatible types
+```
+
+`@`를 사용해서 if문 처럼 사용할 수 있다.
+
+```rs
+fn match_number(my_number: i32) {
+    match my_number {
+        number @ 0..=10 => println!("number is between 0 and 10: {}", number),
+        number @ 11..=20 => println!("number is between 11 and 20: {}", number),
+        number @ 21..=30 => println!("number is between 21 and 30: {}", number),
+        _ => println!("number is greater than 30"),
+    }
+}
+
+fn main() {
+    match_number(5);
+    match_number(15);
+    match_number(25);
+    match_number(35);
+}
+
+number is between 0 and 10: 5
+number is between 11 and 20: 15
+number is between 21 and 30: 25
+number is greater than 30
+```
