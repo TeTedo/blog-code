@@ -132,3 +132,35 @@ fn main() {
     println!("my_animal sound: {}", my_animal.make_sound());
 }
 ```
+
+enum 도 impl 을 사용해서 기능을 만들수가 있다.
+
+```rs
+enum AnimalType {
+    Cat(String),
+    Dog(String)
+}
+
+impl AnimalType {
+    fn make_sound(&self) -> &str {
+        match self {
+            AnimalType::Cat(name) => {
+                println!("name: {}", name);
+                "meow"
+            },
+            AnimalType::Dog(name) => {
+                println!("name: {}", name);
+                "woof"
+            }
+        }
+    }
+}
+
+fn main() {
+    let animal_type = AnimalType::Cat(String::from("Whiskers"));
+    println!("animal_type sound: {}", animal_type.make_sound());
+}
+
+name: Whiskers
+animal_type sound: meow
+```
