@@ -119,7 +119,3 @@
 # Rust
 
 - [Rust 기초 study](https://github.com/TeTedo/blog-code/tree/main/rust-study)
-
-# 기타
-
-- [신입 개발자가 7일 동안 출시할 프로젝트의 PM 맡은 썰](https://github.com/TeTedo/blog-code/tree/main/etc-pm)
