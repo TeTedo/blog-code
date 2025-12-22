@@ -579,3 +579,31 @@ I love the number 100
 I really love the number 100
 100 is such a nice number
 ```
+
+rust 의 iterator의 특징
+
+(1) 지연 평가 (lazy evaluation)
+: map이나 filter 같은 어댑터 메서드는 새로운 이터레이터를 반환할뿐 값을 처리하지 않는다.
+
+(2) 메모리 효율성 : 한 번에 모든 데이터를 메모리에 로드하지 않고 필요할때마다 하나씩 처리한다.
+
+```rs
+let result = vec![1, 2, 3, 4, 5]
+    .iter()
+    .map(|x| x * 2)
+    .map(|x| x + 1)
+    .map(|x| x * 3)
+    .map(|x| x - 5)
+    .map(|x| x / 2)
+    .collect::<Vec<_>>();
+```
+
+실행 순서
+
+1. collect()가 첫 번째 요소를 요청
+2. 요소 1이 map1 → map2 → map3 → map4 → map5를 한 번에 통과
+3. 1 → map1: 2 → map2: 3 → map3: 9 → map4: 4 → map5: 2
+4. 결과 2를 벡터에 저장
+5. collect()가 다음 요소를 요청
+6. 요소 2가 같은 파이프라인을 통과
+7. 반복
