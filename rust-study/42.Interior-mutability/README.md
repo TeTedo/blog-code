@@ -192,3 +192,254 @@ fn main() {
     println!("my_cell: {:?}", my_cell);
 }
 ```
+
+Cell 을 이용하면 다른 사람이 만들어놓은 코드에서 mut 필요없이 값을 바꿀수가 있다.
+
+```rs
+use std::cell::{Cell, RefCell};
+
+trait SuperCoolTrait {
+    fn cool_function(&self);
+}
+
+#[derive(Debug)]
+struct User {
+    id: u32,
+    times_used: Cell<u32>
+}
+
+impl SuperCoolTrait for User {
+    fn cool_function(&self) {
+        println!("Now using the cool function");
+        let times_used = self.times_used.get();
+        self.times_used.set(times_used + 1);
+    }
+}
+
+fn main() {
+    let user = User {
+        id: 89723,
+        times_used: Cell::new(0),
+    };
+
+    for _ in 0..20 {
+        user.cool_function();
+    }
+
+    println!("user: {:?}", user);
+}
+```
+
+RC - reference counter를 체크하면서 0이 되면 drop 한다.
+
+ARC - thread safe Reference Counter
+
+ARC<Mutex> - atomic reference counter
+
+RC 를 먼저 봐보자.
+
+```rs
+use std::rc::Rc;
+
+fn takes_a_string(input: String) {
+
+}
+
+fn also_takes_a_string(input: String) {
+
+}
+
+fn main() {
+    let my_string = "Hello there".to_string();
+    takes_a_string(my_string);
+    also_takes_a_string(my_string);
+}
+```
+
+ownership 때문에 위 처럼 string 의 ownership을 takes_a_string 에 주면 다음 함수가 실행되지 못한다.
+
+이를 해결하기 위해 clone 을 쓸수 있는데
+
+```rs
+use std::rc::Rc;
+
+fn takes_a_string(input: String) {
+
+}
+
+fn also_takes_a_string(input: String) {
+
+}
+
+fn main() {
+    let my_string = "Hello there".to_string();
+    takes_a_string(my_string.clone());
+    also_takes_a_string(my_string);
+}
+```
+
+이렇게 쓸수 있지만 Rc를 이용할 수 있다.
+
+```rs
+use std::rc::Rc;
+
+fn takes_a_string(input: Rc<String>) {
+
+}
+
+fn also_takes_a_string(input: Rc<String>) {
+
+}
+
+fn main() {
+    let my_string = Rc::new("Hello there".to_string());
+    takes_a_string(Rc::clone(&my_string));
+    also_takes_a_string(Rc::clone(&my_string));
+}
+```
+
+Rc 를 사용하면 기존 메모리 포인터에 reference counter 만 증가하기 때문에 메모리를 거의 사용하지 않는다.
+
+메모리적으로 보면 String::clone 은 완전히 새로운 메모리주소를 생성하지만 Rc::clone 은 기존 메모리 주소를 사용하여 counter만 증가시킨다.
+
+```rs
+use std::rc::Rc;
+
+fn main() {
+    let large_string = "A".repeat(1000);
+
+    println!("=== String::clone() ===");
+    let cloned1 = large_string.clone();
+    let cloned2 = large_string.clone();
+
+    println!("large_string:     {:p}", large_string.as_ptr());
+    println!("cloned1:  {:p}", cloned1.as_ptr());
+    println!("cloned2:  {:p}", cloned2.as_ptr());
+
+    println!("\n=== Rc::clone() ===");
+    let rc_string = Rc::new(large_string);
+    let rc_cloned1 = Rc::clone(&rc_string);
+    let rc_cloned2 = Rc::clone(&rc_string);
+
+    println!("rc_string:  {:p}", Rc::as_ptr(&rc_string));
+    println!("rc_cloned1: {:p}", Rc::as_ptr(&rc_cloned1));
+    println!("rc_cloned2: {:p}", Rc::as_ptr(&rc_cloned2));
+
+    println!("\nreference count: {}", Rc::strong_count(&rc_string));
+}
+
+=== String::clone() ===
+large_string:     0x128e063d0
+cloned1:  0x128e067c0
+cloned2:  0x128e06bb0
+
+=== Rc::clone() ===
+rc_string:  0x128e061e0
+rc_cloned1: 0x128e061e0
+rc_cloned2: 0x128e061e0
+
+reference count: 3
+```
+
+Rc 의 예시를 하나 더 보자
+
+```rs
+use std::rc::Rc;
+
+#[derive(Debug)]
+struct City {
+    name: String,
+    population: u32,
+    history: Rc<String>
+}
+
+#[derive(Debug)]
+struct CityData {
+    names: Vec<String>,
+    histories: Vec<Rc<String>>,
+}
+
+fn main() {
+    let calgary = City {
+        name: "Calgary".to_string(),
+        population: 1_239_260,
+        history: Rc::new("Calgary was founded in 1875".to_string()),
+    };
+
+    let canada_cities = CityData {
+        names: vec![calgary.name],
+        histories: vec![Rc::clone(&calgary.history)],
+    };
+
+    println!("Calgary's history is: {}", calgary.history);
+
+    println!("Data has {} cities", Rc::strong_count(&calgary.history));
+}
+```
+
+다음은 RefCell 의 예시를 보겠다.
+
+```rs
+#[derive(Debug)]
+struct DataContainer<'a> {
+    data: &'a mut String
+}
+
+fn main() {
+    let mut important_data = "Super duper important data".to_string();
+
+    let container_1 = DataContainer {
+        data: &mut important_data,
+    };
+
+    let mut container_2 = DataContainer {
+        data: &mut important_data,
+    };
+
+    for _ in 0..10 {
+        *container_1.data = String::from("hi");
+        *container_2.data = String::from("hello");
+    }
+
+}
+```
+
+rust 에서는 한 스코프에서 하나의 &mut 만 허용한다.
+
+여기서 container_1 을 수정하려고 할때는 important_data 라는 String 을 빌려와서 수정한다.
+
+바로 이어서 container_2 에서 수정할때도 같은데이터를 빌리려고 시도한다.
+
+만약 이게 가능하다면 값을 수정할때 데이터 경합이 발생할수 있다고 한다.
+
+이럴때 Rc와 RefCell 을 사용해서 값을 바꿀수 있다.
+
+```rs
+use std::cell::RefCell;
+use std::rc::Rc;
+
+#[derive(Debug)]
+struct DataContainer {
+    data: Rc<RefCell<String>>
+}
+
+fn main() {
+    let important_data = Rc::new(RefCell::new("Super duper important data ".to_string()));
+
+    let container_1 = DataContainer {
+        data: Rc::clone(&important_data),
+    };
+
+    let container_2 = DataContainer {
+        data: Rc::clone(&important_data),
+    };
+
+    for _ in 0..10 {
+        container_1.data.borrow_mut().push('a');
+        container_2.data.borrow_mut().push('b');
+    }
+
+    println!("container_1: {:?}", container_1);
+    println!("container_2: {:?}", container_2);
+}
+```
