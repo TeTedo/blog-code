@@ -121,6 +121,8 @@ fn main() {
 
 forget(my_string.clone())은 복사본의 힙 메모리("thoethoe")가 해제되지 않아 메모리 누수가 발생합니다.
 
+하지만 drop 을 시키면 안되는 값을 forget 으로 해놓으면 drop 하기 위해 메모리를 접근할수 없다.
+
 ---
 
 align_of
