@@ -1,0 +1,11 @@
+[package]
+name = "external-crates"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+fastrand = "2"
+
+[[bin]]
+name = "1"
+path = "1.rs"
